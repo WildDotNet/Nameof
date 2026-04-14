@@ -32,12 +32,6 @@ internal static class NameofCoreSource
                 public GenerateNameofAttribute(string fullTypeName, global::System.Type assemblyOf) { }
                 public GenerateNameofAttribute(string fullTypeName, string assemblyName) { }
             }
-
-            {{EmbeddedAnnotation}}
-            [global::System.AttributeUsage(global::System.AttributeTargets.Assembly, AllowMultiple = true)]
-            internal sealed class GenerateNameofAttribute<T> : global::System.Attribute
-            {
-            }
         }
         """;
 }

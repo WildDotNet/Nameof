@@ -53,7 +53,7 @@ internal static class NameofGeneratorBehaviorTestCaseFactory
             $$"""
             using Nameof;
 
-            [assembly: GenerateNameof<ExternalFixtures.{{fixtureName}}>]
+            [assembly: GenerateNameof(typeof(ExternalFixtures.{{fixtureName}}))]
             """;
 
         return CreateBehaviorCase(snapshotName, source, fixture.Reference);

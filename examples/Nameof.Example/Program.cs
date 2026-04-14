@@ -1,6 +1,6 @@
 using Nameof;
 
-[assembly: GenerateNameof<ConsoleKeyInfo>]
+[assembly: GenerateNameof(typeof(ConsoleKeyInfo))]
 [assembly: GenerateNameof(typeof(SomeType))]
 [assembly: GenerateNameof("System.IO.ConsoleStream", assemblyOf: typeof(Console))]
 [assembly: GenerateNameof("Nameof.NameofGenerator", assemblyName: "Nameof")]

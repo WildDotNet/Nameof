@@ -23,16 +23,6 @@ internal static class NameofRequestCollector
                 continue;
             }
 
-            if (attributeClass.Arity == 1 && attributeClass.TypeArguments.Length == 1)
-            {
-                if (attributeClass.TypeArguments[0] is INamedTypeSymbol typeArgument)
-                {
-                    builder.Add(new NameofRequest(typeArgument, null, null, null));
-                }
-
-                continue;
-            }
-
             if (attributeClass.Arity != 0)
             {
                 continue;
