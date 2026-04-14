@@ -37,6 +37,35 @@ namespace Nameof
     {
     }
 }
+    },
+    {
+      HintName: Nameof.CurrentAssemblyPublicInterface.g.cs,
+      Source:
+#nullable enable
+
+[global::Microsoft.CodeAnalysis.Embedded]
+internal static class Nameof_CurrentAssemblyPublicInterface
+{
+    extension(global::Nameof.nameof<global::CurrentAssemblyPublicInterface>)
+    {
+        public static string InternalEvent => "InternalEvent";
+        public static string InternalMethod => "InternalMethod";
+        public static string InternalProperty => "InternalProperty";
+        public static string PrivateEvent => "PrivateEvent";
+        public static string PrivateMethod => "PrivateMethod";
+        public static string PrivateProperty => "PrivateProperty";
+        public static string PrivateProtectedEvent => "PrivateProtectedEvent";
+        public static string PrivateProtectedMethod => "PrivateProtectedMethod";
+        public static string PrivateProtectedProperty => "PrivateProtectedProperty";
+        public static string ProtectedEvent => "ProtectedEvent";
+        public static string ProtectedInternalEvent => "ProtectedInternalEvent";
+        public static string ProtectedInternalMethod => "ProtectedInternalMethod";
+        public static string ProtectedInternalProperty => "ProtectedInternalProperty";
+        public static string ProtectedMethod => "ProtectedMethod";
+        public static string ProtectedProperty => "ProtectedProperty";
+    }
+}
+
     }
   ]
 }

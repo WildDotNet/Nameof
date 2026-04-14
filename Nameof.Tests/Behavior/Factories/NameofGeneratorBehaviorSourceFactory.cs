@@ -226,12 +226,28 @@ internal static class NameofGeneratorBehaviorSourceFactory
             $$"""
             {{visibility}} interface {{typeName}}
             {
-                int Count { get; }
-                string Name { get; }
-                event global::System.Action? Changed;
-                void Execute();
+                private int PrivateProperty => 1;
+                protected int ProtectedProperty => 2;
+                internal int InternalProperty => 3;
+                protected internal int ProtectedInternalProperty => 4;
+                private protected int PrivateProtectedProperty => 5;
+                public int PublicProperty => 6;
+
+                private event global::System.Action? PrivateEvent { add { } remove { } }
+                protected event global::System.Action? ProtectedEvent { add { } remove { } }
+                internal event global::System.Action? InternalEvent { add { } remove { } }
+                protected internal event global::System.Action? ProtectedInternalEvent { add { } remove { } }
+                private protected event global::System.Action? PrivateProtectedEvent { add { } remove { } }
+                public event global::System.Action? PublicEvent { add { } remove { } }
+
+                private void PrivateMethod() { }
+                protected void ProtectedMethod() { }
+                internal void InternalMethod() { }
+                protected internal void ProtectedInternalMethod() { }
+                private protected void PrivateProtectedMethod() { }
+                public void PublicMethod() { }
             }
-        """;
+            """;
     }
 
     private static string CreateEnumDeclaration(string visibility, string typeName)
