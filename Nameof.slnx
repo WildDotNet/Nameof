@@ -7,4 +7,5 @@
   </Folder>
   <Project Path="Nameof.Example/Nameof.Example.csproj" />
   <Project Path="Nameof/Nameof.csproj" />
+  <Project Path="Nameof.Tests/Nameof.Tests.csproj" />
 </Solution>
