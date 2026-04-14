@@ -1,11 +1,5 @@
 ﻿{
-  Diagnostics: [
-    {
-      Id: NAMEOF003,
-      Severity: Warning,
-      Message: Could not resolve type "System.NotARealType" using assemblyName "System.Console". No members were generated.
-    }
-  ],
+  Diagnostics: null,
   GeneratedSources: [
     {
       HintName: Nameof.Core.g.cs,
@@ -43,6 +37,22 @@ namespace Nameof
     {
     }
 }
+    },
+    {
+      HintName: Nameof.ISomeContract.g.cs,
+      Source:
+#nullable enable
+
+[global::Microsoft.CodeAnalysis.Embedded]
+internal static class Nameof_ISomeContract
+{
+    extension(global::Nameof.nameof<global::ISomeContract>)
+    {
+        public static string Count => "Count";
+        public static string Execute => "Execute";
+    }
+}
+
     }
   ]
 }

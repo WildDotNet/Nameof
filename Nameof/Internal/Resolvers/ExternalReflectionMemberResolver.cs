@@ -64,7 +64,7 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             return resolved is null
                 ? null
                 : CreateResolvedFullTypeRequest(
-                    request.FullTypeName,
+                    resolved,
                     ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false));
         }
 
@@ -88,7 +88,7 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         return type is null
             ? null
             : CreateResolvedFullTypeRequest(
-                request.FullTypeName,
+                type,
                 ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false));
     }
 
@@ -247,8 +247,10 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         return null;
     }
 
-    private static ResolvedNameofType CreateResolvedFullTypeRequest(string fullTypeName, HashSet<string> memberNames)
+    private static ResolvedNameofType CreateResolvedFullTypeRequest(Type type, HashSet<string> memberNames)
     {
+        var fullTypeName = type.FullName
+            ?? throw new InvalidOperationException("Resolved external type must have a full name.");
         var (namespaceName, typeName) = Nameof.Internal.Support.TypeNameUtilities.SplitNamespaceAndTypeName(fullTypeName);
 
         return new ResolvedNameofType(
@@ -259,6 +261,26 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             WrapperClassName: "Nameof_" + Nameof.Internal.Support.TypeNameUtilities.MakeId(fullTypeName),
             FullyQualifiedTypeName: $"global::{fullTypeName}",
             MemberNames: memberNames,
-            StubKind: ("class", " sealed", true));
+            StubKind: GetStubKind(type));
+    }
+
+    private static (string TypeKeyword, string SealedKeyword, bool NeedsPrivateConstructor) GetStubKind(Type type)
+    {
+        if (type.IsEnum)
+        {
+            return ("enum", "", false);
+        }
+
+        if (type.IsInterface)
+        {
+            return ("interface", "", false);
+        }
+
+        if (type.IsValueType)
+        {
+            return ("struct", "", false);
+        }
+
+        return ("class", " sealed", true);
     }
 }

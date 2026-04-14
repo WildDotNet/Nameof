@@ -26,7 +26,7 @@ internal static class NameofSourceEmitter
 
         if (resolved.EmitStub && resolved.StubKind is { } stubKind)
         {
-            writer.OpenBlock($"internal{stubKind.SealedKeyword} {stubKind.TypeKeyword} {resolved.TypeName}{resolved.TypeParameters}");
+            OpenAnnotatedBlock(writer, $"internal{stubKind.SealedKeyword} {stubKind.TypeKeyword} {resolved.TypeName}{resolved.TypeParameters}");
 
             if (stubKind.NeedsPrivateConstructor)
             {
@@ -37,7 +37,7 @@ internal static class NameofSourceEmitter
             writer.Line();
         }
 
-        writer.OpenBlock($"internal static class {resolved.WrapperClassName}");
+        OpenAnnotatedBlock(writer, $"internal static class {resolved.WrapperClassName}");
         writer.OpenBlock($"extension(global::Nameof.nameof<{resolved.FullyQualifiedTypeName}>)");
 
         foreach (var (identifier, value) in IdentifierUtilities.BuildMemberMap(resolved.MemberNames)
@@ -74,6 +74,12 @@ internal static class NameofSourceEmitter
             FullyQualifiedTypeName: $"global::{fullTypeName}",
             MemberNames: memberNames,
             StubKind: !hasSymbolInCompilation ? ("class", " sealed", true) : null);
+    }
+
+    private static void OpenAnnotatedBlock(CodeWriter writer, string header)
+    {
+        writer.Line("[global::Microsoft.CodeAnalysis.Embedded]");
+        writer.OpenBlock(header);
     }
 
     public static ResolvedNameofType? CreateResolvedSymbolType(

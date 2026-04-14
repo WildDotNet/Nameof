@@ -6,12 +6,23 @@
       Source:
 #nullable enable
 
+namespace Microsoft.CodeAnalysis
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.AttributeUsage(global::System.AttributeTargets.All, Inherited = false)]
+    internal sealed class EmbeddedAttribute : global::System.Attribute
+    {
+    }
+}
+
 namespace Nameof
 {
+    [global::Microsoft.CodeAnalysis.Embedded]
     public static class nameof<T>
     {
     }
 
+    [global::Microsoft.CodeAnalysis.Embedded]
     [global::System.AttributeUsage(global::System.AttributeTargets.Assembly, AllowMultiple = true)]
     internal sealed class GenerateNameofAttribute : global::System.Attribute
     {
@@ -20,6 +31,7 @@ namespace Nameof
         public GenerateNameofAttribute(string fullTypeName, string assemblyName) { }
     }
 
+    [global::Microsoft.CodeAnalysis.Embedded]
     [global::System.AttributeUsage(global::System.AttributeTargets.Assembly, AllowMultiple = true)]
     internal sealed class GenerateNameofAttribute<T> : global::System.Attribute
     {
@@ -33,11 +45,13 @@ namespace Nameof
 
 namespace Nameof
 {
+    [global::Microsoft.CodeAnalysis.Embedded]
     internal sealed class NameofGenerator
     {
         private NameofGenerator() { }
     }
 
+    [global::Microsoft.CodeAnalysis.Embedded]
     internal static class Nameof_Nameof_NameofGenerator
     {
         extension(global::Nameof.nameof<global::Nameof.NameofGenerator>)

@@ -1,11 +1,5 @@
 ﻿{
-  Diagnostics: [
-    {
-      Id: NAMEOF003,
-      Severity: Warning,
-      Message: Could not resolve type "System.NotARealType" using assemblyName "System.Console". No members were generated.
-    }
-  ],
+  Diagnostics: null,
   GeneratedSources: [
     {
       HintName: Nameof.Core.g.cs,
@@ -43,6 +37,30 @@ namespace Nameof
     {
     }
 }
+    },
+    {
+      HintName: Nameof.type_Task3_ExternalInterfaceFixture_ExternalFixtures_IHiddenContract.g.cs,
+      Source:
+#nullable enable
+
+namespace ExternalFixtures
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal interface IHiddenContract
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class Nameof_ExternalFixtures_IHiddenContract
+    {
+        extension(global::Nameof.nameof<global::ExternalFixtures.IHiddenContract>)
+        {
+            public static string Count => "Count";
+            public static string Execute => "Execute";
+        }
+    }
+}
+
     }
   ]
 }

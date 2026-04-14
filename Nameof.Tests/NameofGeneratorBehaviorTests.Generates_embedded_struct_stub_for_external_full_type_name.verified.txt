@@ -1,11 +1,5 @@
 ﻿{
-  Diagnostics: [
-    {
-      Id: NAMEOF003,
-      Severity: Warning,
-      Message: Could not resolve type "System.NotARealType" using assemblyName "System.Console". No members were generated.
-    }
-  ],
+  Diagnostics: null,
   GeneratedSources: [
     {
       HintName: Nameof.Core.g.cs,
@@ -43,6 +37,36 @@ namespace Nameof
     {
     }
 }
+    },
+    {
+      HintName: Nameof.name_Task3_ExternalStructFixture_ExternalFixtures_HiddenStruct.g.cs,
+      Source:
+#nullable enable
+
+namespace ExternalFixtures
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal struct HiddenStruct
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class Nameof_ExternalFixtures_HiddenStruct
+    {
+        extension(global::Nameof.nameof<global::ExternalFixtures.HiddenStruct>)
+        {
+            public static string Equals => "Equals";
+            public static string Finalize => "Finalize";
+            public static string GetHashCode => "GetHashCode";
+            public static string GetType => "GetType";
+            public static string MemberwiseClone => "MemberwiseClone";
+            public static string Reset => "Reset";
+            public static string ToString => "ToString";
+            public static string Value => "Value";
+        }
+    }
+}
+
     }
   ]
 }
