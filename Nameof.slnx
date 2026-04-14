@@ -5,7 +5,7 @@
     <File Path="LICENSE.md" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="Nameof.Example/Nameof.Example.csproj" />
-  <Project Path="Nameof/Nameof.csproj" />
-  <Project Path="Nameof.Tests/Nameof.Tests.csproj" />
+  <Project Path="examples/Nameof.Example/Nameof.Example.csproj" />
+  <Project Path="src/Nameof/Nameof.csproj" />
+  <Project Path="tests/Nameof.Tests/Nameof.Tests.csproj" />
 </Solution>
