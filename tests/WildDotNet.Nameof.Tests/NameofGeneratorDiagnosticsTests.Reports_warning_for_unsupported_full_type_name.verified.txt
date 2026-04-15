@@ -3,7 +3,8 @@
     {
       Id: NAMEOF001,
       Severity: Warning,
-      Message: GenerateNameof("SomeNamespace.Outer+Inner") is not supported. Only non-generic, non-nested full type names are supported (example: "Namespace.Type").
+      Message: GenerateNameof("SomeNamespace.Outer+Inner") is not supported. Only non-generic, non-nested full type names are supported (example: "Namespace.Type").,
+      Location: 2:12
     }
   ],
   GeneratedSources: [

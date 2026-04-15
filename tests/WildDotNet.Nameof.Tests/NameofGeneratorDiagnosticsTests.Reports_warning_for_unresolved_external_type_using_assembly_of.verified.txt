@@ -3,7 +3,8 @@
     {
       Id: NAMEOF002,
       Severity: Warning,
-      Message: Could not resolve type "System.NotARealType" using assemblyOf "Console". No members were generated.
+      Message: Could not resolve type "System.NotARealType" using assemblyOf "Console". No members were generated.,
+      Location: 3:12
     }
   ],
   GeneratedSources: [

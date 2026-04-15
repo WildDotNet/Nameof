@@ -87,7 +87,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                 {
                     spc.ReportDiagnostic(Diagnostic.Create(
                         ClosedGenericTypeDescriptor,
-                        Location.None,
+                        request.AttributeLocation,
                         GetDiagnosticDisplayName(request)));
                     continue;
                 }
@@ -121,7 +121,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                 {
                     spc.ReportDiagnostic(Diagnostic.Create(
                         UnsupportedFullTypeNameDescriptor,
-                        Location.None,
+                        request.AttributeLocation,
                         request.FullTypeName));
                     continue;
                 }
@@ -139,7 +139,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                     {
                         spc.ReportDiagnostic(Diagnostic.Create(
                             ResolutionFailedUsingAssemblyOfDescriptor,
-                            Location.None,
+                            request.AttributeLocation,
                             request.FullTypeName,
                             request.AssemblyOfType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
                         continue;
@@ -162,7 +162,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                     {
                         spc.ReportDiagnostic(Diagnostic.Create(
                             ResolutionFailedUsingAssemblyNameDescriptor,
-                            Location.None,
+                            request.AttributeLocation,
                             request.FullTypeName,
                             request.AssemblyName));
                         continue;

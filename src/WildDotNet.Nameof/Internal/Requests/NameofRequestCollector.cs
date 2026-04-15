@@ -14,6 +14,8 @@ internal static class NameofRequestCollector
 
         foreach (var attribute in compilation.Assembly.GetAttributes())
         {
+            var attributeLocation = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation();
+
             if (attribute.AttributeClass is not INamedTypeSymbol attributeClass)
             {
                 continue;
@@ -41,6 +43,7 @@ internal static class NameofRequestCollector
                             null,
                             null,
                             null,
+                            attributeLocation,
                             IsClosedGeneric: true));
                     }
                     else if (TypeNameUtilities.IsOpenGenericDefinition(typeSymbol))
@@ -50,12 +53,13 @@ internal static class NameofRequestCollector
                             null,
                             null,
                             null,
+                            attributeLocation,
                             IsOpenGenericDefinition: true,
                             GenericArity: typeSymbol.Arity));
                     }
                     else
                     {
-                        builder.Add(new NameofRequest(typeSymbol, null, null, null));
+                        builder.Add(new NameofRequest(typeSymbol, null, null, null, attributeLocation));
                     }
                 }
 
@@ -82,6 +86,7 @@ internal static class NameofRequestCollector
                     builder,
                     fullTypeName,
                     assemblyArgument,
+                    attributeLocation,
                     isOpenGenericDefinition: false,
                     isClosedGeneric: true,
                     genericArity: 0);
@@ -98,6 +103,7 @@ internal static class NameofRequestCollector
                         null,
                         null,
                         null,
+                        attributeLocation,
                         IsOpenGenericDefinition: true,
                         GenericArity: genericArity));
                     continue;
@@ -107,6 +113,7 @@ internal static class NameofRequestCollector
                     builder,
                     fullTypeName,
                     assemblyArgument,
+                    attributeLocation,
                     isOpenGenericDefinition: true,
                     isClosedGeneric: false,
                     genericArity: genericArity);
@@ -116,7 +123,7 @@ internal static class NameofRequestCollector
             var resolved = compilation.GetTypeByMetadataName(fullTypeName);
             if (resolved is not null)
             {
-                builder.Add(new NameofRequest(resolved, null, null, null));
+                    builder.Add(new NameofRequest(resolved, null, null, null, attributeLocation));
                 continue;
             }
 
@@ -124,6 +131,7 @@ internal static class NameofRequestCollector
                 builder,
                 fullTypeName,
                 assemblyArgument,
+                attributeLocation,
                 isOpenGenericDefinition: false,
                 isClosedGeneric: false,
                 genericArity: 0);
@@ -136,6 +144,7 @@ internal static class NameofRequestCollector
         ImmutableArray<NameofRequest>.Builder builder,
         string fullTypeName,
         TypedConstant assemblyArgument,
+        Location? attributeLocation,
         bool isOpenGenericDefinition,
         bool isClosedGeneric,
         int genericArity)
@@ -148,6 +157,7 @@ internal static class NameofRequestCollector
                 fullTypeName,
                 assemblyOfType,
                 null,
+                attributeLocation,
                 IsOpenGenericDefinition: isOpenGenericDefinition,
                 IsClosedGeneric: isClosedGeneric,
                 GenericArity: genericArity));
@@ -162,6 +172,7 @@ internal static class NameofRequestCollector
                 fullTypeName,
                 null,
                 assemblyName,
+                attributeLocation,
                 IsOpenGenericDefinition: isOpenGenericDefinition,
                 IsClosedGeneric: isClosedGeneric,
                 GenericArity: genericArity));

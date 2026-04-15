@@ -133,7 +133,8 @@ internal sealed record GeneratorRunResult(
             .Select(static diagnostic => new DiagnosticSnapshot(
                 diagnostic.Id,
                 diagnostic.Severity.ToString(),
-                GeneratorTestDriver.NormalizeLineEndings(diagnostic.GetMessage())))
+                GeneratorTestDriver.NormalizeLineEndings(diagnostic.GetMessage()),
+                GetDiagnosticLocation(diagnostic)))
             .ToImmutableArray();
 
         var generatedSources = GeneratedSources
@@ -144,6 +145,17 @@ internal sealed record GeneratorRunResult(
             .ToImmutableArray();
 
         return new GeneratorRunSnapshot(diagnostics, generatedSources);
+    }
+
+    private static string? GetDiagnosticLocation(Diagnostic diagnostic)
+    {
+        if (diagnostic.Location is null || !diagnostic.Location.IsInSource)
+        {
+            return null;
+        }
+
+        var lineSpan = diagnostic.Location.GetLineSpan();
+        return $"{lineSpan.StartLinePosition.Line + 1}:{lineSpan.StartLinePosition.Character + 1}";
     }
 }
 
@@ -158,7 +170,8 @@ internal sealed record GeneratorRunSnapshot(
 internal sealed record DiagnosticSnapshot(
     string Id,
     string Severity,
-    string Message);
+    string Message,
+    string? Location);
 
 internal sealed record GeneratedSourceSnapshot(
     string HintName,

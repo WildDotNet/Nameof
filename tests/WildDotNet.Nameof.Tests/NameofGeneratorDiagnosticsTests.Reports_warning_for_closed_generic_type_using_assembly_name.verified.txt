@@ -3,7 +3,8 @@
     {
       Id: NAMEOF004,
       Severity: Warning,
-      Message: GenerateNameof("System.Collections.Generic.List[System.Int32]") is not supported. Only open generic definitions are supported. No members were generated.
+      Message: GenerateNameof("System.Collections.Generic.List[System.Int32]") is not supported. Only open generic definitions are supported. No members were generated.,
+      Location: 3:12
     }
   ],
   GeneratedSources: [
