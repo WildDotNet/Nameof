@@ -62,16 +62,23 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
 
             var targetAssembly = whereRuntimeType?.Assembly ?? TryLoadAssemblyByName(assemblyName);
             var resolved = targetAssembly?.GetType(request.FullTypeName, throwOnError: false);
-            var symbol = compilation.GetTypeByMetadataName(request.FullTypeName);
+            var symbol = FindTypeSymbol(request.AssemblyOfType.ContainingAssembly, request.FullTypeName);
 
             return resolved is null
                 ? null
-                : CreateResolvedFullTypeRequest(
-                    resolved,
-                    FilterMemberNames(
+                : symbol is not null
+                    ? NameofSourceEmitter.CreateResolvedSymbolType(
                         symbol,
-                        ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false),
-                        compilation));
+                        FilterMemberNames(
+                            symbol,
+                            ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: true),
+                            compilation))
+                    : CreateResolvedFullTypeRequest(
+                        resolved,
+                        FilterMemberNames(
+                            null,
+                            ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false),
+                            compilation));
         }
 
         if (request.AssemblyName is null)
@@ -91,14 +98,23 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             type = assembly?.GetType(request.FullTypeName, throwOnError: false);
         }
 
+        var referencedSymbol = FindReferencedTypeSymbol(compilation, request.AssemblyName, request.FullTypeName);
+
         return type is null
             ? null
-            : CreateResolvedFullTypeRequest(
-                type,
-                FilterMemberNames(
-                    compilation.GetTypeByMetadataName(request.FullTypeName),
-                    ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false),
-                    compilation));
+            : referencedSymbol is not null
+                ? NameofSourceEmitter.CreateResolvedSymbolType(
+                    referencedSymbol,
+                    FilterMemberNames(
+                        referencedSymbol,
+                        ExtractMemberNames(type, includePublicMembers: true, declaredOnly: true),
+                        compilation))
+                : CreateResolvedFullTypeRequest(
+                    type,
+                    FilterMemberNames(
+                        null,
+                        ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false),
+                        compilation));
     }
 
 #pragma warning disable RS1035
@@ -246,6 +262,19 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             return memberNames;
         }
 
+        if (typeSymbol.TypeKind == TypeKind.Enum)
+        {
+            var enumFieldNames = new HashSet<string>(
+                typeSymbol.GetMembers()
+                    .OfType<IFieldSymbol>()
+                    .Where(static field => !field.IsImplicitlyDeclared && field.AssociatedSymbol is null)
+                    .Select(static field => field.Name),
+                StringComparer.Ordinal);
+
+            memberNames.IntersectWith(enumFieldNames);
+            return memberNames;
+        }
+
         foreach (var member in typeSymbol.GetMembers())
         {
             if (member.IsImplicitlyDeclared)
@@ -310,6 +339,54 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         }
 
         return null;
+    }
+
+    private static INamedTypeSymbol? FindReferencedTypeSymbol(
+        Compilation compilation,
+        string assemblyName,
+        string fullTypeName)
+    {
+        foreach (var reference in compilation.References)
+        {
+            if (compilation.GetAssemblyOrModuleSymbol(reference) is not IAssemblySymbol assemblySymbol)
+            {
+                continue;
+            }
+
+            if (!string.Equals(assemblySymbol.Identity.Name, assemblyName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return FindTypeSymbol(assemblySymbol, fullTypeName);
+        }
+
+        return null;
+    }
+
+    private static INamedTypeSymbol? FindTypeSymbol(IAssemblySymbol assemblySymbol, string fullTypeName)
+    {
+        var lastDot = fullTypeName.LastIndexOf('.');
+        var namespaceName = lastDot >= 0 ? fullTypeName[..lastDot] : string.Empty;
+        var typeName = lastDot >= 0 ? fullTypeName[(lastDot + 1)..] : fullTypeName;
+
+        var currentNamespace = assemblySymbol.GlobalNamespace;
+
+        if (!string.IsNullOrEmpty(namespaceName))
+        {
+            foreach (var namespaceSegment in namespaceName.Split('.'))
+            {
+                currentNamespace = currentNamespace.GetNamespaceMembers()
+                    .SingleOrDefault(ns => string.Equals(ns.Name, namespaceSegment, StringComparison.Ordinal));
+
+                if (currentNamespace is null)
+                {
+                    return null;
+                }
+            }
+        }
+
+        return currentNamespace.GetTypeMembers(typeName).SingleOrDefault();
     }
 
     private static ResolvedNameofType CreateResolvedFullTypeRequest(Type type, HashSet<string> memberNames)

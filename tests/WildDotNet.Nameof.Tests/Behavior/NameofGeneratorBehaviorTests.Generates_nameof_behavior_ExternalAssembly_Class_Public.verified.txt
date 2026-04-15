@@ -33,40 +33,37 @@ namespace WildDotNet.Nameof
 }
     },
     {
-      HintName: WildDotNet.Nameof.type_Behavior_External_ByAssemblyOf_Struct_Public_ExternalFixtures_ByAssemblyOfStructPublic.g.cs,
+      HintName: WildDotNet.Nameof.ExternalFixtures_ClassPublic.g.cs,
       Source:
 #nullable enable
 
 namespace ExternalFixtures
 {
     [global::Microsoft.CodeAnalysis.Embedded]
-    internal struct ByAssemblyOfStructPublic
+    internal static class Nameof_ExternalFixtures_ClassPublic
     {
-    }
-
-    [global::Microsoft.CodeAnalysis.Embedded]
-    internal static class Nameof_ExternalFixtures_ByAssemblyOfStructPublic
-    {
-        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.ByAssemblyOfStructPublic>)
+        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.ClassPublic>)
         {
-            public static string Equals => "Equals";
-            public static string Finalize => "Finalize";
-            public static string GetHashCode => "GetHashCode";
-            public static string GetType => "GetType";
             public static string InternalEvent => "InternalEvent";
             public static string InternalMethod => "InternalMethod";
             public static string InternalProperty => "InternalProperty";
-            public static string MemberwiseClone => "MemberwiseClone";
             public static string PrivateEvent => "PrivateEvent";
             public static string PrivateMethod => "PrivateMethod";
             public static string PrivateProperty => "PrivateProperty";
-            public static string PublicEvent => "PublicEvent";
-            public static string PublicMethod => "PublicMethod";
-            public static string PublicProperty => "PublicProperty";
-            public static string ToString => "ToString";
+            public static string PrivateProtectedEvent => "PrivateProtectedEvent";
+            public static string PrivateProtectedMethod => "PrivateProtectedMethod";
+            public static string PrivateProtectedProperty => "PrivateProtectedProperty";
+            public static string ProtectedEvent => "ProtectedEvent";
+            public static string ProtectedInternalEvent => "ProtectedInternalEvent";
+            public static string ProtectedInternalMethod => "ProtectedInternalMethod";
+            public static string ProtectedInternalProperty => "ProtectedInternalProperty";
+            public static string ProtectedMethod => "ProtectedMethod";
+            public static string ProtectedProperty => "ProtectedProperty";
             public static string _internalField => "_internalField";
             public static string _privateField => "_privateField";
-            public static string _publicField => "_publicField";
+            public static string _privateProtectedField => "_privateProtectedField";
+            public static string _protectedField => "_protectedField";
+            public static string _protectedInternalField => "_protectedInternalField";
         }
     }
 }

@@ -10,18 +10,27 @@ public class NameofGeneratorBehaviorTests
     [CombinatorialData]
     public Task Generates_nameof_behavior(
         AssemblyType assemblyType,
-        LookupKind lookupKind,
         DeclarationType declarationType,
         AccessType accessType)
     {
-        var testCase = NameofGeneratorBehaviorTestCaseFactory.BuildBehaviorCase(
+        var testCase = NameofGeneratorBehaviorTestCaseFactory.BuildBehaviorScenarioCase(
             assemblyType,
-            lookupKind,
             declarationType,
             accessType);
 
-        var result = GeneratorTestDriver.Run(testCase.Source, testCase.References);
+        var byType = GeneratorTestDriver.Run(testCase.ByType.Source, testCase.ByType.References).ToSnapshot();
+        var byAssemblyName = GeneratorTestDriver.Run(testCase.ByAssemblyName.Source, testCase.ByAssemblyName.References).ToSnapshot();
+        var byAssemblyOf = GeneratorTestDriver.Run(testCase.ByAssemblyOf.Source, testCase.ByAssemblyOf.References).ToSnapshot();
 
-        return Verify(result.ToSnapshot()).UseTextForParameters(testCase.SnapshotName);
+        AssertEquivalent(byType, byAssemblyName);
+        AssertEquivalent(byType, byAssemblyOf);
+
+        return Verify(byType).UseTextForParameters(testCase.SnapshotName);
+    }
+
+    private static void AssertEquivalent(GeneratorRunSnapshot expected, GeneratorRunSnapshot actual)
+    {
+        Assert.Equal(expected.Diagnostics, actual.Diagnostics);
+        Assert.Equal(expected.GeneratedSources, actual.GeneratedSources);
     }
 }

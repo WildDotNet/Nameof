@@ -33,18 +33,25 @@ namespace WildDotNet.Nameof
 }
     },
     {
-      HintName: WildDotNet.Nameof.LocalNamespace_SomeType.g.cs,
+      HintName: WildDotNet.Nameof.ExternalFixtures_StructPublic.g.cs,
       Source:
 #nullable enable
 
-namespace LocalNamespace
+namespace ExternalFixtures
 {
     [global::Microsoft.CodeAnalysis.Embedded]
-    internal static class Nameof_LocalNamespace_SomeType
+    internal static class Nameof_ExternalFixtures_StructPublic
     {
-        extension(global::WildDotNet.Nameof.nameof<global::LocalNamespace.SomeType>)
+        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.StructPublic>)
         {
-            public static string _value => "_value";
+            public static string InternalEvent => "InternalEvent";
+            public static string InternalMethod => "InternalMethod";
+            public static string InternalProperty => "InternalProperty";
+            public static string PrivateEvent => "PrivateEvent";
+            public static string PrivateMethod => "PrivateMethod";
+            public static string PrivateProperty => "PrivateProperty";
+            public static string _internalField => "_internalField";
+            public static string _privateField => "_privateField";
         }
     }
 }

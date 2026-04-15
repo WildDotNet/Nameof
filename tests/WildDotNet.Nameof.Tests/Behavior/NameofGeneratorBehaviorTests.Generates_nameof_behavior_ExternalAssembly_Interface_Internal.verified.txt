@@ -33,21 +33,21 @@ namespace WildDotNet.Nameof
 }
     },
     {
-      HintName: WildDotNet.Nameof.ExternalFixtures_ByTypeInterfaceInternal.g.cs,
+      HintName: WildDotNet.Nameof.ExternalFixtures_InterfaceInternal.g.cs,
       Source:
 #nullable enable
 
 namespace ExternalFixtures
 {
     [global::Microsoft.CodeAnalysis.Embedded]
-    internal interface ByTypeInterfaceInternal
+    internal interface InterfaceInternal
     {
     }
 
     [global::Microsoft.CodeAnalysis.Embedded]
-    internal static class Nameof_ExternalFixtures_ByTypeInterfaceInternal
+    internal static class Nameof_ExternalFixtures_InterfaceInternal
     {
-        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.ByTypeInterfaceInternal>)
+        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.InterfaceInternal>)
         {
             public static string PrivateEvent => "PrivateEvent";
             public static string PrivateMethod => "PrivateMethod";

@@ -33,19 +33,25 @@ namespace WildDotNet.Nameof
 }
     },
     {
-      HintName: WildDotNet.Nameof.CurrentAssemblyPublicStruct.g.cs,
+      HintName: WildDotNet.Nameof.ExternalFixtures_EnumInternal.g.cs,
       Source:
 #nullable enable
 
-[global::Microsoft.CodeAnalysis.Embedded]
-internal static class Nameof_CurrentAssemblyPublicStruct
+namespace ExternalFixtures
 {
-    extension(global::WildDotNet.Nameof.nameof<global::CurrentAssemblyPublicStruct>)
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal enum EnumInternal
     {
-        public static string PrivateEvent => "PrivateEvent";
-        public static string PrivateMethod => "PrivateMethod";
-        public static string PrivateProperty => "PrivateProperty";
-        public static string _privateField => "_privateField";
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class Nameof_ExternalFixtures_EnumInternal
+    {
+        extension(global::WildDotNet.Nameof.nameof<global::ExternalFixtures.EnumInternal>)
+        {
+            public static string First => "First";
+            public static string Second => "Second";
+        }
     }
 }
 

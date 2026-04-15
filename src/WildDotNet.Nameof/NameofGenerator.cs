@@ -76,11 +76,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    var source = NameofSourceEmitter.EmitResolvedType(resolved);
-                    if (!string.IsNullOrWhiteSpace(source))
-                    {
-                        spc.AddSource($"WildDotNet.Nameof.{TypeNameUtilities.GetTypeIdentity(request.Symbol)}.g.cs", SourceText.From(source, Encoding.UTF8));
-                    }
+                    AddResolvedSource(spc, resolved);
 
                     continue;
                 }
@@ -120,11 +116,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    var source = NameofSourceEmitter.EmitResolvedType(resolved);
-                    if (!string.IsNullOrWhiteSpace(source))
-                    {
-                        spc.AddSource($"WildDotNet.Nameof.{TypeNameUtilities.MakeId(key)}.g.cs", SourceText.From(source, Encoding.UTF8));
-                    }
+                    AddResolvedSource(spc, resolved);
 
                     continue;
                 }
@@ -149,14 +141,23 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    var source = NameofSourceEmitter.EmitResolvedType(resolved);
-                    if (!string.IsNullOrWhiteSpace(source))
-                    {
-                        spc.AddSource($"WildDotNet.Nameof.{TypeNameUtilities.MakeId(key)}.g.cs", SourceText.From(source, Encoding.UTF8));
-                    }
+                    AddResolvedSource(spc, resolved);
                 }
             }
         });
+    }
+
+    private static void AddResolvedSource(SourceProductionContext spc, ResolvedNameofType resolved)
+    {
+        var source = NameofSourceEmitter.EmitResolvedType(resolved);
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            var hintIdentity = resolved.WrapperClassName.StartsWith("Nameof_", StringComparison.Ordinal)
+                ? resolved.WrapperClassName["Nameof_".Length..]
+                : resolved.WrapperClassName;
+
+            spc.AddSource($"WildDotNet.Nameof.{hintIdentity}.g.cs", SourceText.From(source, Encoding.UTF8));
+        }
     }
 
     private static Compilation WithAllMetadata(Compilation compilation)
