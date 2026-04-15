@@ -1,0 +1,123 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: NAMEOF005,
+      Severity: Warning,
+      Message: GenerateNameof("List<T>") is duplicated for assembly target "System.Private.CoreLib". The duplicate request was ignored.,
+      Location: 5:12
+    }
+  ],
+  GeneratedSources: [
+    {
+      HintName: WildDotNet.Nameof.Core.g.cs,
+      Source:
+#nullable enable
+
+namespace Microsoft.CodeAnalysis
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.AttributeUsage(global::System.AttributeTargets.All, Inherited = false)]
+    internal sealed class EmbeddedAttribute : global::System.Attribute
+    {
+    }
+}
+
+namespace WildDotNet.Nameof
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class nameof<T>
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.AttributeUsage(global::System.AttributeTargets.Assembly, AllowMultiple = true)]
+    internal sealed class GenerateNameofAttribute : global::System.Attribute
+    {
+        public GenerateNameofAttribute(global::System.Type type) { }
+        public GenerateNameofAttribute(string fullTypeName, global::System.Type assemblyOf) { }
+        public GenerateNameofAttribute(string fullTypeName, string assemblyName) { }
+    }
+}
+    },
+    {
+      HintName: WildDotNet.Nameof.Generic.System_Collections_Generic_List_1.g.cs,
+      Source:
+#nullable enable
+
+namespace System.Collections.Generic
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class List
+    {
+        private List() { }
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class NameofGeneric_System_Collections_Generic_List_1
+    {
+        extension(global::WildDotNet.Nameof.nameof<global::System.Collections.Generic.List>)
+        {
+            internal static global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.List, TArity> of<TArity>() where TArity : global::WildDotNet.Nameof.INameofGenericArity1 => global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.List, TArity>.Instance;
+        }
+
+        extension(global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.List, global::WildDotNet.Nameof.arity1> _)
+        {
+            public string AddWithResize => "AddWithResize";
+            public string GetNewCapacity => "GetNewCapacity";
+            public string Grow => "Grow";
+            public string GrowForInsertion => "GrowForInsertion";
+            public string IsCompatibleObject => "IsCompatibleObject";
+            public string Item => "Item";
+            public string System_Collections_Generic_ICollection_T__IsReadOnly => "System.Collections.Generic.ICollection<T>.IsReadOnly";
+            public string System_Collections_Generic_IEnumerable_T__GetEnumerator => "System.Collections.Generic.IEnumerable<T>.GetEnumerator";
+            public string System_Collections_ICollection_CopyTo => "System.Collections.ICollection.CopyTo";
+            public string System_Collections_ICollection_IsSynchronized => "System.Collections.ICollection.IsSynchronized";
+            public string System_Collections_ICollection_SyncRoot => "System.Collections.ICollection.SyncRoot";
+            public string System_Collections_IEnumerable_GetEnumerator => "System.Collections.IEnumerable.GetEnumerator";
+            public string System_Collections_IList_Add => "System.Collections.IList.Add";
+            public string System_Collections_IList_Contains => "System.Collections.IList.Contains";
+            public string System_Collections_IList_IndexOf => "System.Collections.IList.IndexOf";
+            public string System_Collections_IList_Insert => "System.Collections.IList.Insert";
+            public string System_Collections_IList_IsFixedSize => "System.Collections.IList.IsFixedSize";
+            public string System_Collections_IList_IsReadOnly => "System.Collections.IList.IsReadOnly";
+            public string System_Collections_IList_Item => "System.Collections.IList.Item";
+            public string System_Collections_IList_Remove => "System.Collections.IList.Remove";
+            public string _items => "_items";
+            public string _size => "_size";
+            public string _version => "_version";
+            public string s_emptyArray => "s_emptyArray";
+        }
+    }
+}
+
+    },
+    {
+      HintName: WildDotNet.Nameof.GenericSupport.g.cs,
+      Source:
+#nullable enable
+
+namespace WildDotNet.Nameof
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class NameofGeneric<T, TArity>
+    {
+        private NameofGeneric() { }
+        internal static NameofGeneric<T, TArity> Instance { get; } = new();
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal interface INameofGenericArity1
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class arity1 : global::WildDotNet.Nameof.INameofGenericArity1
+    {
+        private arity1() { }
+    }
+
+}
+
+    }
+  ]
+}

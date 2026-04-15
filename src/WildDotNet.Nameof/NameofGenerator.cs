@@ -48,6 +48,14 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor DuplicateRequestDescriptor = new(
+        id: "NAMEOF005",
+        title: "Duplicate GenerateNameof request",
+        messageFormat: @"GenerateNameof(""{0}"") is duplicated for assembly target ""{1}"". The duplicate request was ignored.",
+        category: "NameofGenerator",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(static ctx =>
@@ -94,11 +102,14 @@ internal sealed class NameofGenerator : IIncrementalGenerator
 
                 if (request.Symbol is not null)
                 {
-                    var key = request.IsOpenGenericDefinition
-                        ? TypeNameUtilities.GetMetadataFullName(request.Symbol)
-                        : request.Symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var key = GetDeduplicationKey(request);
                     if (!seen.Add(key))
                     {
+                        spc.ReportDiagnostic(Diagnostic.Create(
+                            DuplicateRequestDescriptor,
+                            request.AttributeLocation,
+                            GetDiagnosticDisplayName(request),
+                            GetDuplicateAssemblyTargetDisplayName(request)));
                         continue;
                     }
 
@@ -128,9 +139,14 @@ internal sealed class NameofGenerator : IIncrementalGenerator
 
                 if (request.AssemblyOfType is not null)
                 {
-                    var key = $"type|{request.AssemblyOfType.ContainingAssembly.Identity.Name}|{request.FullTypeName}";
+                    var key = GetDeduplicationKey(request);
                     if (!seen.Add(key))
                     {
+                        spc.ReportDiagnostic(Diagnostic.Create(
+                            DuplicateRequestDescriptor,
+                            request.AttributeLocation,
+                            GetDiagnosticDisplayName(request),
+                            GetDuplicateAssemblyTargetDisplayName(request)));
                         continue;
                     }
 
@@ -151,9 +167,14 @@ internal sealed class NameofGenerator : IIncrementalGenerator
 
                 if (request.AssemblyName is not null)
                 {
-                    var key = $"name|{request.AssemblyName}|{request.FullTypeName}";
+                    var key = GetDeduplicationKey(request);
                     if (!seen.Add(key))
                     {
+                        spc.ReportDiagnostic(Diagnostic.Create(
+                            DuplicateRequestDescriptor,
+                            request.AttributeLocation,
+                            GetDiagnosticDisplayName(request),
+                            GetDuplicateAssemblyTargetDisplayName(request)));
                         continue;
                     }
 
@@ -248,6 +269,35 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         }
 
         return request.FullTypeName ?? string.Empty;
+    }
+
+    private static string GetDuplicateAssemblyTargetDisplayName(NameofRequest request)
+    {
+        if (request.Symbol is not null)
+        {
+            return request.Symbol.ContainingAssembly.Identity.Name;
+        }
+
+        if (request.AssemblyOfType is not null)
+        {
+            return request.AssemblyOfType.ContainingAssembly.Identity.Name;
+        }
+
+        return request.AssemblyName ?? string.Empty;
+    }
+
+    private static string GetDeduplicationKey(NameofRequest request)
+    {
+        if (request.Symbol is not null)
+        {
+            return $"{request.Symbol.ContainingAssembly.Identity.Name}|{TypeNameUtilities.GetMetadataFullName(request.Symbol)}";
+        }
+
+        var assemblyTarget = request.AssemblyOfType is not null
+            ? request.AssemblyOfType.ContainingAssembly.Identity.Name
+            : request.AssemblyName ?? string.Empty;
+
+        return $"{assemblyTarget}|{request.FullTypeName}";
     }
 
     private static ResolvedNameofType? ResolveRequest(

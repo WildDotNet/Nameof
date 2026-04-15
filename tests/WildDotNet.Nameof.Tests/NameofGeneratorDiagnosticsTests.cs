@@ -5,6 +5,15 @@ namespace WildDotNet.Nameof.Tests;
 
 public class NameofGeneratorDiagnosticsTests
 {
+    public enum DuplicateScenario
+    {
+        TypeAndType,
+        TypeAndAssemblyName,
+        TypeAndAssemblyOf,
+        FullTypeNameAndAssemblyName,
+        FullTypeNameAndAssemblyOf
+    }
+
     [Fact]
     public Task Reports_warning_for_unsupported_full_type_name()
     {
@@ -63,6 +72,64 @@ public class NameofGeneratorDiagnosticsTests
         var result = GeneratorTestDriver.Run(source);
 
         return Verify(result.ToSnapshot());
+    }
+
+    [Theory]
+    [CombinatorialData]
+    public Task Reports_warning_for_duplicate_request(DuplicateScenario scenario)
+    {
+        var source = scenario switch
+        {
+            DuplicateScenario.TypeAndType =>
+                """
+                using System;
+                using WildDotNet.Nameof;
+
+                [assembly: GenerateNameof(typeof(ConsoleKeyInfo))]
+                [assembly: GenerateNameof(typeof(ConsoleKeyInfo))]
+                """,
+
+            DuplicateScenario.TypeAndAssemblyName =>
+                """
+                using System;
+                using WildDotNet.Nameof;
+
+                [assembly: GenerateNameof(typeof(ConsoleKeyInfo))]
+                [assembly: GenerateNameof("System.ConsoleKeyInfo", assemblyName: "System.Console")]
+                """,
+
+            DuplicateScenario.TypeAndAssemblyOf =>
+                """
+                using System;
+                using WildDotNet.Nameof;
+
+                [assembly: GenerateNameof(typeof(ConsoleKeyInfo))]
+                [assembly: GenerateNameof("System.ConsoleKeyInfo", assemblyOf: typeof(Console))]
+                """,
+
+            DuplicateScenario.FullTypeNameAndAssemblyName =>
+                """
+                using WildDotNet.Nameof;
+
+                [assembly: GenerateNameof("System.Collections.Generic.List`1", assemblyName: "System.Private.CoreLib")]
+                [assembly: GenerateNameof("System.Collections.Generic.List`1", assemblyName: "System.Private.CoreLib")]
+                """,
+
+            DuplicateScenario.FullTypeNameAndAssemblyOf =>
+                """
+                using System.Collections.Generic;
+                using WildDotNet.Nameof;
+
+                [assembly: GenerateNameof("System.Collections.Generic.List`1", assemblyOf: typeof(Dictionary<,>))]
+                [assembly: GenerateNameof("System.Collections.Generic.List`1", assemblyOf: typeof(Dictionary<,>))]
+                """,
+
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+
+        var result = GeneratorTestDriver.Run(source);
+
+        return Verify(result.ToSnapshot()).UseTextForParameters(scenario.ToString());
     }
 
     [Fact]
