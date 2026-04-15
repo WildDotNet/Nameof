@@ -7,6 +7,8 @@ namespace WildDotNet.Nameof.Internal.Generation;
 internal static class NameofCoreSource
 {
     private const string EmbeddedAnnotation = "[global::Microsoft.CodeAnalysis.Embedded]";
+    private const string ReservedIdentifierSuppression =
+        "[global::System.Diagnostics.CodeAnalysis.SuppressMessage(\"Compiler\", \"CS8981\", Justification = \"Generated code.\")]";
 
     public const string BaseText =
         $$"""
@@ -24,6 +26,7 @@ internal static class NameofCoreSource
         namespace {{GeneratorConstants.ProductNamespace}}
         {
             {{EmbeddedAnnotation}}
+            {{ReservedIdentifierSuppression}}
             internal static class nameof<T>
             {
             }
@@ -71,6 +74,7 @@ internal static class NameofCoreSource
             writer.Line();
 
             writer.Line(EmbeddedAnnotation);
+            writer.Line(ReservedIdentifierSuppression);
             writer.OpenBlock($"internal sealed class arity{arity} : {GeneratorConstants.FullyQualifiedNamespace}.INameofGenericArity{arity}");
             writer.Line($"private arity{arity}() {{ }}");
             writer.CloseBlock();

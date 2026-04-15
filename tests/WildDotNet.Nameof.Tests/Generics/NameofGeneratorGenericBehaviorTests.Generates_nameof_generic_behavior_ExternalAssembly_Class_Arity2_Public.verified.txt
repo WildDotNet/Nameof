@@ -18,6 +18,7 @@ namespace Microsoft.CodeAnalysis
 namespace WildDotNet.Nameof
 {
     [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.Diagnostics.CodeAnalysis.SuppressMessage("Compiler", "CS8981", Justification = "Generated code.")]
     internal static class nameof<T>
     {
     }
@@ -100,6 +101,7 @@ namespace WildDotNet.Nameof
     }
 
     [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.Diagnostics.CodeAnalysis.SuppressMessage("Compiler", "CS8981", Justification = "Generated code.")]
     internal sealed class arity2 : global::WildDotNet.Nameof.INameofGenericArity2
     {
         private arity2() { }
