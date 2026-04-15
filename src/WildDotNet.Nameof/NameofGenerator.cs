@@ -40,11 +40,19 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor ClosedGenericTypeDescriptor = new(
+        id: "NAMEOF004",
+        title: "Closed generic types are not supported",
+        messageFormat: @"GenerateNameof(""{0}"") is not supported. Only open generic definitions are supported. No members were generated.",
+        category: "NameofGenerator",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(static ctx =>
         {
-            ctx.AddSource("WildDotNet.Nameof.Core.g.cs", SourceText.From(NameofCoreSource.Text, Encoding.UTF8));
+            ctx.AddSource($"{GeneratorConstants.HintPrefix}.Core.g.cs", SourceText.From(NameofCoreSource.BaseText, Encoding.UTF8));
         });
 
         var pipeline = context.CompilationProvider
@@ -54,17 +62,41 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(pipeline, static (spc, input) =>
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
+            var emittedStubs = new HashSet<string>(StringComparer.Ordinal);
             ITypeMemberResolver[] resolvers =
             [
                 new CurrentCompilationMemberResolver(),
                 new ExternalReflectionMemberResolver()
             ];
 
+            var genericSupportSource = NameofCoreSource.CreateGenericSupport(
+                input.Requests
+                    .Where(static request => request.IsOpenGenericDefinition)
+                    .Select(static request => request.GenericArity));
+
+            if (!string.IsNullOrWhiteSpace(genericSupportSource))
+            {
+                spc.AddSource(
+                    $"{GeneratorConstants.HintPrefix}.GenericSupport.g.cs",
+                    SourceText.From(genericSupportSource, Encoding.UTF8));
+            }
+
             foreach (var request in input.Requests)
             {
+                if (request.IsClosedGeneric)
+                {
+                    spc.ReportDiagnostic(Diagnostic.Create(
+                        ClosedGenericTypeDescriptor,
+                        Location.None,
+                        GetDiagnosticDisplayName(request)));
+                    continue;
+                }
+
                 if (request.Symbol is not null)
                 {
-                    var key = request.Symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var key = request.IsOpenGenericDefinition
+                        ? TypeNameUtilities.GetMetadataFullName(request.Symbol)
+                        : request.Symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     if (!seen.Add(key))
                     {
                         continue;
@@ -76,8 +108,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    AddResolvedSource(spc, resolved);
-
+                    AddResolvedSource(spc, resolved, emittedStubs);
                     continue;
                 }
 
@@ -86,13 +117,12 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                if (!IsSupportedFullTypeName(request.FullTypeName))
+                if (!request.IsOpenGenericDefinition && !IsSupportedNonGenericFullTypeName(request.FullTypeName))
                 {
                     spc.ReportDiagnostic(Diagnostic.Create(
                         UnsupportedFullTypeNameDescriptor,
                         Location.None,
                         request.FullTypeName));
-
                     continue;
                 }
 
@@ -112,12 +142,10 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                             Location.None,
                             request.FullTypeName,
                             request.AssemblyOfType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-
                         continue;
                     }
 
-                    AddResolvedSource(spc, resolved);
-
+                    AddResolvedSource(spc, resolved, emittedStubs);
                     continue;
                 }
 
@@ -137,26 +165,37 @@ internal sealed class NameofGenerator : IIncrementalGenerator
                             Location.None,
                             request.FullTypeName,
                             request.AssemblyName));
-
                         continue;
                     }
 
-                    AddResolvedSource(spc, resolved);
+                    AddResolvedSource(spc, resolved, emittedStubs);
                 }
             }
         });
     }
 
-    private static void AddResolvedSource(SourceProductionContext spc, ResolvedNameofType resolved)
+    private static void AddResolvedSource(
+        SourceProductionContext spc,
+        ResolvedNameofType resolved,
+        HashSet<string> emittedStubs)
     {
+        if (resolved.EmitStub &&
+            resolved.StubIdentity is not null &&
+            !emittedStubs.Add(resolved.StubIdentity))
+        {
+            resolved = resolved with { EmitStub = false, StubIdentity = null, StubKind = null };
+        }
+
         var source = NameofSourceEmitter.EmitResolvedType(resolved);
         if (!string.IsNullOrWhiteSpace(source))
         {
-            var hintIdentity = resolved.WrapperClassName.StartsWith("Nameof_", StringComparison.Ordinal)
-                ? resolved.WrapperClassName["Nameof_".Length..]
+            var hintIdentity = resolved.WrapperClassName.StartsWith("NameofGeneric_", StringComparison.Ordinal)
+                ? $"Generic.{resolved.WrapperClassName["NameofGeneric_".Length..]}"
+                : resolved.WrapperClassName.StartsWith("Nameof_", StringComparison.Ordinal)
+                    ? resolved.WrapperClassName["Nameof_".Length..]
                 : resolved.WrapperClassName;
 
-            spc.AddSource($"WildDotNet.Nameof.{hintIdentity}.g.cs", SourceText.From(source, Encoding.UTF8));
+            spc.AddSource($"{GeneratorConstants.HintPrefix}.{hintIdentity}.g.cs", SourceText.From(source, Encoding.UTF8));
         }
     }
 
@@ -176,7 +215,7 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         return csharpCompilation.WithOptions(options.WithMetadataImportOptions(MetadataImportOptions.All));
     }
 
-    private static bool IsSupportedFullTypeName(string fullTypeName)
+    private static bool IsSupportedNonGenericFullTypeName(string fullTypeName)
     {
         if (string.IsNullOrWhiteSpace(fullTypeName))
         {
@@ -199,6 +238,16 @@ internal sealed class NameofGenerator : IIncrementalGenerator
         }
 
         return true;
+    }
+
+    private static string GetDiagnosticDisplayName(NameofRequest request)
+    {
+        if (request.Symbol is not null)
+        {
+            return request.Symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        }
+
+        return request.FullTypeName ?? string.Empty;
     }
 
     private static ResolvedNameofType? ResolveRequest(

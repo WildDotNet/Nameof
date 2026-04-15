@@ -1,0 +1,135 @@
+﻿{
+  Diagnostics: null,
+  GeneratedSources: [
+    {
+      HintName: WildDotNet.Nameof.Core.g.cs,
+      Source:
+#nullable enable
+
+namespace Microsoft.CodeAnalysis
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.AttributeUsage(global::System.AttributeTargets.All, Inherited = false)]
+    internal sealed class EmbeddedAttribute : global::System.Attribute
+    {
+    }
+}
+
+namespace WildDotNet.Nameof
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class nameof<T>
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    [global::System.AttributeUsage(global::System.AttributeTargets.Assembly, AllowMultiple = true)]
+    internal sealed class GenerateNameofAttribute : global::System.Attribute
+    {
+        public GenerateNameofAttribute(global::System.Type type) { }
+        public GenerateNameofAttribute(string fullTypeName, global::System.Type assemblyOf) { }
+        public GenerateNameofAttribute(string fullTypeName, string assemblyName) { }
+    }
+}
+    },
+    {
+      HintName: WildDotNet.Nameof.Generic.System_Collections_Generic_Dictionary_2.g.cs,
+      Source:
+#nullable enable
+
+namespace System.Collections.Generic
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class Dictionary
+    {
+        private Dictionary() { }
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal static class NameofGeneric_System_Collections_Generic_Dictionary_2
+    {
+        extension(global::WildDotNet.Nameof.nameof<global::System.Collections.Generic.Dictionary>)
+        {
+            internal static global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.Dictionary, TArity> of<TArity>() where TArity : global::WildDotNet.Nameof.INameofGenericArity2 => global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.Dictionary, TArity>.Instance;
+        }
+
+        extension(global::WildDotNet.Nameof.NameofGeneric<global::System.Collections.Generic.Dictionary, global::WildDotNet.Nameof.arity2> _)
+        {
+            public string AddRange => "AddRange";
+            public string CopyEntries => "CopyEntries";
+            public string CopyTo => "CopyTo";
+            public string FindValue => "FindValue";
+            public string GetBucket => "GetBucket";
+            public string Initialize => "Initialize";
+            public string IsCompatibleKey => "IsCompatibleKey";
+            public string Item => "Item";
+            public string Resize => "Resize";
+            public string System_Collections_Generic_ICollection_System_Collections_Generic_KeyValuePair_TKey_TValue___Add => "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.Add";
+            public string System_Collections_Generic_ICollection_System_Collections_Generic_KeyValuePair_TKey_TValue___Contains => "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.Contains";
+            public string System_Collections_Generic_ICollection_System_Collections_Generic_KeyValuePair_TKey_TValue___CopyTo => "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.CopyTo";
+            public string System_Collections_Generic_ICollection_System_Collections_Generic_KeyValuePair_TKey_TValue___IsReadOnly => "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.IsReadOnly";
+            public string System_Collections_Generic_ICollection_System_Collections_Generic_KeyValuePair_TKey_TValue___Remove => "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.Remove";
+            public string System_Collections_Generic_IDictionary_TKey_TValue__Keys => "System.Collections.Generic.IDictionary<TKey,TValue>.Keys";
+            public string System_Collections_Generic_IDictionary_TKey_TValue__Values => "System.Collections.Generic.IDictionary<TKey,TValue>.Values";
+            public string System_Collections_Generic_IEnumerable_System_Collections_Generic_KeyValuePair_TKey_TValue___GetEnumerator => "System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TKey,TValue>>.GetEnumerator";
+            public string System_Collections_Generic_IReadOnlyDictionary_TKey_TValue__Keys => "System.Collections.Generic.IReadOnlyDictionary<TKey,TValue>.Keys";
+            public string System_Collections_Generic_IReadOnlyDictionary_TKey_TValue__Values => "System.Collections.Generic.IReadOnlyDictionary<TKey,TValue>.Values";
+            public string System_Collections_ICollection_CopyTo => "System.Collections.ICollection.CopyTo";
+            public string System_Collections_ICollection_IsSynchronized => "System.Collections.ICollection.IsSynchronized";
+            public string System_Collections_ICollection_SyncRoot => "System.Collections.ICollection.SyncRoot";
+            public string System_Collections_IDictionary_Add => "System.Collections.IDictionary.Add";
+            public string System_Collections_IDictionary_Contains => "System.Collections.IDictionary.Contains";
+            public string System_Collections_IDictionary_GetEnumerator => "System.Collections.IDictionary.GetEnumerator";
+            public string System_Collections_IDictionary_IsFixedSize => "System.Collections.IDictionary.IsFixedSize";
+            public string System_Collections_IDictionary_IsReadOnly => "System.Collections.IDictionary.IsReadOnly";
+            public string System_Collections_IDictionary_Item => "System.Collections.IDictionary.Item";
+            public string System_Collections_IDictionary_Keys => "System.Collections.IDictionary.Keys";
+            public string System_Collections_IDictionary_Remove => "System.Collections.IDictionary.Remove";
+            public string System_Collections_IDictionary_Values => "System.Collections.IDictionary.Values";
+            public string System_Collections_IEnumerable_GetEnumerator => "System.Collections.IEnumerable.GetEnumerator";
+            public string TryInsert => "TryInsert";
+            public string _buckets => "_buckets";
+            public string _comparer => "_comparer";
+            public string _count => "_count";
+            public string _entries => "_entries";
+            public string _fastModMultiplier => "_fastModMultiplier";
+            public string _freeCount => "_freeCount";
+            public string _freeList => "_freeList";
+            public string _keys => "_keys";
+            public string _values => "_values";
+            public string _version => "_version";
+        }
+    }
+}
+
+    },
+    {
+      HintName: WildDotNet.Nameof.GenericSupport.g.cs,
+      Source:
+#nullable enable
+
+namespace WildDotNet.Nameof
+{
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class NameofGeneric<T, TArity>
+    {
+        private NameofGeneric() { }
+        internal static NameofGeneric<T, TArity> Instance { get; } = new();
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal interface INameofGenericArity2
+    {
+    }
+
+    [global::Microsoft.CodeAnalysis.Embedded]
+    internal sealed class arity2 : global::WildDotNet.Nameof.INameofGenericArity2
+    {
+        private arity2() { }
+    }
+
+}
+
+    }
+  ]
+}

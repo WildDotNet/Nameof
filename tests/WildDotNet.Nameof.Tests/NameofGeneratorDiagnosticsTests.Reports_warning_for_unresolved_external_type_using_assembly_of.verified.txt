@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis
 namespace WildDotNet.Nameof
 {
     [global::Microsoft.CodeAnalysis.Embedded]
-    public static class nameof<T>
+    internal static class nameof<T>
     {
     }
 

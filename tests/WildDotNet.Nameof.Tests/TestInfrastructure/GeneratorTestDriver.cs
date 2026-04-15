@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.IO;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -28,8 +29,16 @@ internal static class GeneratorTestDriver
                     NormalizeLineEndings(source.SourceText.ToString())))
                 .ToImmutableArray();
 
+        using var emitStream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(emitStream);
+        Assert.True(
+            emitResult.Success,
+            string.Join(
+                Environment.NewLine,
+                emitResult.Diagnostics.Select(static diagnostic => diagnostic.ToString())));
+
         return new GeneratorRunResult(
-            diagnostics.AddRange(outputCompilation.GetDiagnostics()),
+            diagnostics.AddRange(outputCompilation.GetDiagnostics()).AddRange(emitResult.Diagnostics),
             generatedSources);
     }
 

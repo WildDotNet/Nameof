@@ -2,6 +2,7 @@ using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using WildDotNet.Nameof.Internal.Model;
+using WildDotNet.Nameof.Internal.Support;
 
 namespace WildDotNet.Nameof.Internal.Requests;
 
@@ -33,7 +34,29 @@ internal static class NameofRequestCollector
                 var arg0 = attribute.ConstructorArguments[0];
                 if (arg0.Kind == TypedConstantKind.Type && arg0.Value is INamedTypeSymbol typeSymbol)
                 {
-                    builder.Add(new NameofRequest(typeSymbol, null, null, null));
+                    if (TypeNameUtilities.IsClosedConstructedGenericType(typeSymbol))
+                    {
+                        builder.Add(new NameofRequest(
+                            typeSymbol,
+                            null,
+                            null,
+                            null,
+                            IsClosedGeneric: true));
+                    }
+                    else if (TypeNameUtilities.IsOpenGenericDefinition(typeSymbol))
+                    {
+                        builder.Add(new NameofRequest(
+                            typeSymbol.OriginalDefinition,
+                            null,
+                            null,
+                            null,
+                            IsOpenGenericDefinition: true,
+                            GenericArity: typeSymbol.Arity));
+                    }
+                    else
+                    {
+                        builder.Add(new NameofRequest(typeSymbol, null, null, null));
+                    }
                 }
 
                 continue;
@@ -53,6 +76,43 @@ internal static class NameofRequestCollector
                 continue;
             }
 
+            if (TypeNameUtilities.IsClosedGenericTypeName(fullTypeName))
+            {
+                AddFullNameRequest(
+                    builder,
+                    fullTypeName,
+                    assemblyArgument,
+                    isOpenGenericDefinition: false,
+                    isClosedGeneric: true,
+                    genericArity: 0);
+                continue;
+            }
+
+            if (TypeNameUtilities.TryGetOpenGenericArity(fullTypeName, out var genericArity))
+            {
+                var resolvedGeneric = compilation.GetTypeByMetadataName(fullTypeName);
+                if (resolvedGeneric is not null)
+                {
+                    builder.Add(new NameofRequest(
+                        resolvedGeneric.OriginalDefinition,
+                        null,
+                        null,
+                        null,
+                        IsOpenGenericDefinition: true,
+                        GenericArity: genericArity));
+                    continue;
+                }
+
+                AddFullNameRequest(
+                    builder,
+                    fullTypeName,
+                    assemblyArgument,
+                    isOpenGenericDefinition: true,
+                    isClosedGeneric: false,
+                    genericArity: genericArity);
+                continue;
+            }
+
             var resolved = compilation.GetTypeByMetadataName(fullTypeName);
             if (resolved is not null)
             {
@@ -60,20 +120,51 @@ internal static class NameofRequestCollector
                 continue;
             }
 
-            if (assemblyArgument.Kind == TypedConstantKind.Type &&
-                assemblyArgument.Value is INamedTypeSymbol assemblyOfType)
-            {
-                builder.Add(new NameofRequest(null, fullTypeName, assemblyOfType, null));
-                continue;
-            }
-
-            if (assemblyArgument.Kind == TypedConstantKind.Primitive &&
-                assemblyArgument.Value is string assemblyName)
-            {
-                builder.Add(new NameofRequest(null, fullTypeName, null, assemblyName));
-            }
+            AddFullNameRequest(
+                builder,
+                fullTypeName,
+                assemblyArgument,
+                isOpenGenericDefinition: false,
+                isClosedGeneric: false,
+                genericArity: 0);
         }
 
         return builder.ToImmutable();
+    }
+
+    private static void AddFullNameRequest(
+        ImmutableArray<NameofRequest>.Builder builder,
+        string fullTypeName,
+        TypedConstant assemblyArgument,
+        bool isOpenGenericDefinition,
+        bool isClosedGeneric,
+        int genericArity)
+    {
+        if (assemblyArgument.Kind == TypedConstantKind.Type &&
+            assemblyArgument.Value is INamedTypeSymbol assemblyOfType)
+        {
+            builder.Add(new NameofRequest(
+                null,
+                fullTypeName,
+                assemblyOfType,
+                null,
+                IsOpenGenericDefinition: isOpenGenericDefinition,
+                IsClosedGeneric: isClosedGeneric,
+                GenericArity: genericArity));
+            return;
+        }
+
+        if (assemblyArgument.Kind == TypedConstantKind.Primitive &&
+            assemblyArgument.Value is string assemblyName)
+        {
+            builder.Add(new NameofRequest(
+                null,
+                fullTypeName,
+                null,
+                assemblyName,
+                IsOpenGenericDefinition: isOpenGenericDefinition,
+                IsClosedGeneric: isClosedGeneric,
+                GenericArity: genericArity));
+        }
     }
 }

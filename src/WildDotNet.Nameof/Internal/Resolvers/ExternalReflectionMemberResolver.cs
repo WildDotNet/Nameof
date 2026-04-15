@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using WildDotNet.Nameof.Internal.Generation;
 using WildDotNet.Nameof.Internal.Model;
+using WildDotNet.Nameof.Internal.Support;
 
 namespace WildDotNet.Nameof.Internal.Resolvers;
 
@@ -25,7 +26,7 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
     {
         if (request.Symbol is not null)
         {
-            var fullTypeName = request.Symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", string.Empty);
+            var fullTypeName = TypeNameUtilities.GetMetadataFullName(request.Symbol);
             var assemblyName = request.Symbol.ContainingAssembly.Identity.Name;
 
             var runtimeType = TryFindLoadedType(fullTypeName) ??
@@ -34,14 +35,24 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
                 TryLoadAssemblyFromReferences(compilation, assemblyName)?.GetType(fullTypeName, throwOnError: false) ??
                 TryLoadAssemblyByName(assemblyName)?.GetType(fullTypeName, throwOnError: false);
 
-            return runtimeType is null
-                ? null
-                : NameofSourceEmitter.CreateResolvedSymbolType(
+            if (runtimeType is null)
+            {
+                return null;
+            }
+
+            if (request.IsOpenGenericDefinition && runtimeType.IsGenericType && !runtimeType.IsGenericTypeDefinition)
+            {
+                runtimeType = runtimeType.GetGenericTypeDefinition();
+            }
+
+            return NameofSourceEmitter.CreateResolvedSymbolType(
+                compilation,
+                request.Symbol,
+                FilterMemberNames(
                     request.Symbol,
-                    FilterMemberNames(
-                        request.Symbol,
-                        ExtractMemberNames(runtimeType, includePublicMembers: true, declaredOnly: true),
-                        compilation));
+                    ExtractMemberNames(runtimeType, includePublicMembers: true, declaredOnly: true),
+                    compilation),
+                request.IsOpenGenericDefinition);
         }
 
         if (request.FullTypeName is null)
@@ -52,9 +63,7 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         if (request.AssemblyOfType is not null)
         {
             var assemblyName = request.AssemblyOfType.ContainingAssembly.Identity.Name;
-            var assemblyOfFullName = request.AssemblyOfType
-                .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                .Replace("global::", string.Empty);
+            var assemblyOfFullName = TypeNameUtilities.GetMetadataFullName(request.AssemblyOfType);
 
             var whereRuntimeType = TryFindLoadedType(assemblyOfFullName) ??
                 Type.GetType($"{assemblyOfFullName}, {assemblyName}", throwOnError: false) ??
@@ -64,21 +73,33 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             var resolved = targetAssembly?.GetType(request.FullTypeName, throwOnError: false);
             var symbol = FindTypeSymbol(request.AssemblyOfType.ContainingAssembly, request.FullTypeName);
 
-            return resolved is null
-                ? null
-                : symbol is not null
-                    ? NameofSourceEmitter.CreateResolvedSymbolType(
+            if (resolved is null)
+            {
+                return null;
+            }
+
+            if (request.IsOpenGenericDefinition && resolved.IsGenericType && !resolved.IsGenericTypeDefinition)
+            {
+                resolved = resolved.GetGenericTypeDefinition();
+            }
+
+            return symbol is not null
+                ? NameofSourceEmitter.CreateResolvedSymbolType(
+                    compilation,
+                    symbol,
+                    FilterMemberNames(
                         symbol,
-                        FilterMemberNames(
-                            symbol,
-                            ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: true),
-                            compilation))
-                    : CreateResolvedFullTypeRequest(
-                        resolved,
-                        FilterMemberNames(
-                            null,
-                            ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false),
-                            compilation));
+                        ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: true),
+                        compilation),
+                    request.IsOpenGenericDefinition)
+                : NameofSourceEmitter.CreateResolvedRuntimeType(
+                    compilation,
+                    resolved,
+                    FilterMemberNames(
+                        null,
+                        ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false),
+                        compilation),
+                    request.IsOpenGenericDefinition);
         }
 
         if (request.AssemblyName is null)
@@ -100,21 +121,33 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
 
         var referencedSymbol = FindReferencedTypeSymbol(compilation, request.AssemblyName, request.FullTypeName);
 
-        return type is null
-            ? null
-            : referencedSymbol is not null
-                ? NameofSourceEmitter.CreateResolvedSymbolType(
+        if (type is null)
+        {
+            return null;
+        }
+
+        if (request.IsOpenGenericDefinition && type.IsGenericType && !type.IsGenericTypeDefinition)
+        {
+            type = type.GetGenericTypeDefinition();
+        }
+
+        return referencedSymbol is not null
+            ? NameofSourceEmitter.CreateResolvedSymbolType(
+                compilation,
+                referencedSymbol,
+                FilterMemberNames(
                     referencedSymbol,
-                    FilterMemberNames(
-                        referencedSymbol,
-                        ExtractMemberNames(type, includePublicMembers: true, declaredOnly: true),
-                        compilation))
-                : CreateResolvedFullTypeRequest(
-                    type,
-                    FilterMemberNames(
-                        null,
-                        ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false),
-                        compilation));
+                    ExtractMemberNames(type, includePublicMembers: true, declaredOnly: true),
+                    compilation),
+                request.IsOpenGenericDefinition)
+            : NameofSourceEmitter.CreateResolvedRuntimeType(
+                compilation,
+                type,
+                FilterMemberNames(
+                    null,
+                    ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false),
+                    compilation),
+                request.IsOpenGenericDefinition);
     }
 
 #pragma warning disable RS1035
@@ -369,6 +402,8 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         var lastDot = fullTypeName.LastIndexOf('.');
         var namespaceName = lastDot >= 0 ? fullTypeName[..lastDot] : string.Empty;
         var typeName = lastDot >= 0 ? fullTypeName[(lastDot + 1)..] : fullTypeName;
+        var rootTypeName = TypeNameUtilities.GetRootTypeName(typeName);
+        var hasGenericArity = TypeNameUtilities.TryGetOpenGenericArity(typeName, out var arity);
 
         var currentNamespace = assemblySymbol.GlobalNamespace;
 
@@ -386,43 +421,8 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
             }
         }
 
-        return currentNamespace.GetTypeMembers(typeName).SingleOrDefault();
-    }
-
-    private static ResolvedNameofType CreateResolvedFullTypeRequest(Type type, HashSet<string> memberNames)
-    {
-        var fullTypeName = type.FullName
-            ?? throw new InvalidOperationException("Resolved external type must have a full name.");
-        var (namespaceName, typeName) = WildDotNet.Nameof.Internal.Support.TypeNameUtilities.SplitNamespaceAndTypeName(fullTypeName);
-
-        return new ResolvedNameofType(
-            fullTypeName,
-            namespaceName,
-            typeName,
-            EmitStub: true,
-            WrapperClassName: "Nameof_" + WildDotNet.Nameof.Internal.Support.TypeNameUtilities.MakeId(fullTypeName),
-            FullyQualifiedTypeName: $"global::{fullTypeName}",
-            MemberNames: memberNames,
-            StubKind: GetStubKind(type));
-    }
-
-    private static (string TypeKeyword, string SealedKeyword, bool NeedsPrivateConstructor) GetStubKind(Type type)
-    {
-        if (type.IsEnum)
-        {
-            return ("enum", "", false);
-        }
-
-        if (type.IsInterface)
-        {
-            return ("interface", "", false);
-        }
-
-        if (type.IsValueType)
-        {
-            return ("struct", "", false);
-        }
-
-        return ("class", " sealed", true);
+        return hasGenericArity
+            ? currentNamespace.GetTypeMembers(rootTypeName, arity).SingleOrDefault()
+            : currentNamespace.GetTypeMembers(typeName).SingleOrDefault();
     }
 }

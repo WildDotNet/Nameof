@@ -7,8 +7,11 @@ internal sealed record ResolvedNameofType(
     string? NamespaceName,
     string TypeName,
     bool EmitStub,
+    string? StubIdentity,
     string WrapperClassName,
-    string FullyQualifiedTypeName,
+    string ExtensionTargetFullyQualifiedTypeName,
     IReadOnlyCollection<string> MemberNames,
+    bool IsOpenGenericDefinition = false,
+    int GenericArity = 0,
     string? TypeParameters = null,
     (string TypeKeyword, string SealedKeyword, bool NeedsPrivateConstructor)? StubKind = null);

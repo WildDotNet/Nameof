@@ -3,7 +3,7 @@
     {
       Id: NAMEOF001,
       Severity: Warning,
-      Message: GenerateNameof("SomeNamespace.SomeType`1") is not supported. Only non-generic, non-nested full type names are supported (example: "Namespace.Type").
+      Message: GenerateNameof("SomeNamespace.Outer+Inner") is not supported. Only non-generic, non-nested full type names are supported (example: "Namespace.Type").
     }
   ],
   GeneratedSources: [
@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis
 namespace WildDotNet.Nameof
 {
     [global::Microsoft.CodeAnalysis.Embedded]
-    public static class nameof<T>
+    internal static class nameof<T>
     {
     }
 

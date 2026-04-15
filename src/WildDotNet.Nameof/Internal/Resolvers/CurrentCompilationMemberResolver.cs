@@ -32,7 +32,11 @@ internal sealed class CurrentCompilationMemberResolver : ITypeMemberResolver
         }
 
         var memberNames = ExtractMemberNames(type, compilation);
-        return NameofSourceEmitter.CreateResolvedSymbolType(type, memberNames);
+        return NameofSourceEmitter.CreateResolvedSymbolType(
+            compilation,
+            type,
+            memberNames,
+            request.IsOpenGenericDefinition);
     }
 
     private static HashSet<string> ExtractMemberNames(INamedTypeSymbol type, Compilation compilation)

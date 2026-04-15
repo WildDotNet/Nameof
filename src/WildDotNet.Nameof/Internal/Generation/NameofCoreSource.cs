@@ -1,10 +1,14 @@
+using System.Collections.Generic;
+using System.Linq;
+using WildDotNet.Nameof.Internal.Support;
+
 namespace WildDotNet.Nameof.Internal.Generation;
 
 internal static class NameofCoreSource
 {
     private const string EmbeddedAnnotation = "[global::Microsoft.CodeAnalysis.Embedded]";
 
-    public const string Text =
+    public const string BaseText =
         $$"""
         #nullable enable
 
@@ -17,10 +21,10 @@ internal static class NameofCoreSource
             }
         }
 
-        namespace WildDotNet.Nameof
+        namespace {{GeneratorConstants.ProductNamespace}}
         {
             {{EmbeddedAnnotation}}
-            public static class nameof<T>
+            internal static class nameof<T>
             {
             }
 
@@ -34,4 +38,46 @@ internal static class NameofCoreSource
             }
         }
         """;
+
+    public static string CreateGenericSupport(IEnumerable<int> arities)
+    {
+        var arityList = arities
+            .Where(static arity => arity > 0)
+            .Distinct()
+            .OrderBy(static arity => arity)
+            .ToArray();
+
+        if (arityList.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var writer = new CodeWriter();
+        writer.Line("#nullable enable");
+        writer.Line();
+        writer.OpenBlock($"namespace {GeneratorConstants.ProductNamespace}");
+        writer.Line(EmbeddedAnnotation);
+        writer.OpenBlock("internal sealed class NameofGeneric<T, TArity>");
+        writer.Line("private NameofGeneric() { }");
+        writer.Line("internal static NameofGeneric<T, TArity> Instance { get; } = new();");
+        writer.CloseBlock();
+        writer.Line();
+
+        foreach (var arity in arityList)
+        {
+            writer.Line(EmbeddedAnnotation);
+            writer.OpenBlock($"internal interface INameofGenericArity{arity}");
+            writer.CloseBlock();
+            writer.Line();
+
+            writer.Line(EmbeddedAnnotation);
+            writer.OpenBlock($"internal sealed class arity{arity} : {GeneratorConstants.FullyQualifiedNamespace}.INameofGenericArity{arity}");
+            writer.Line($"private arity{arity}() {{ }}");
+            writer.CloseBlock();
+            writer.Line();
+        }
+
+        writer.CloseBlock();
+        return writer.ToString();
+    }
 }

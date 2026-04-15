@@ -6,4 +6,7 @@ internal readonly record struct NameofRequest(
     INamedTypeSymbol? Symbol,
     string? FullTypeName,
     INamedTypeSymbol? AssemblyOfType,
-    string? AssemblyName);
+    string? AssemblyName,
+    bool IsOpenGenericDefinition = false,
+    bool IsClosedGeneric = false,
+    int GenericArity = 0);
