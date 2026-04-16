@@ -21,23 +21,24 @@ internal static class TypeNameUtilities
 
     public static string FormatTypeParameters(INamedTypeSymbol type)
     {
-        if (type.TypeParameters.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        return "<" + string.Join(", ", type.TypeParameters.Select(static p => p.Name)) + ">";
+        var parameterList = GetTypeParameterList(type);
+        return parameterList.Length == 0 ? string.Empty : $"<{parameterList}>";
     }
 
-    public static (string TypeKeyword, string SealedKeyword, bool NeedsPrivateConstructor) GetStubKind(INamedTypeSymbol type)
+    public static string FormatTypeParameters(Type type)
     {
-        return type.TypeKind switch
-        {
-            TypeKind.Enum => ("enum", "", false),
-            TypeKind.Interface => ("interface", "", false),
-            TypeKind.Struct => ("struct", "", false),
-            _ => ("class", " sealed", true)
-        };
+        var parameterList = GetTypeParameterList(type);
+        return parameterList.Length == 0 ? string.Empty : $"<{parameterList}>";
+    }
+
+    public static string GetTypeParameterList(INamedTypeSymbol type)
+    {
+        return string.Join(", ", type.TypeParameters.Select(static p => p.Name));
+    }
+
+    public static string GetTypeParameterList(Type type)
+    {
+        return string.Join(", ", type.GetGenericArguments().Select(static argument => argument.Name));
     }
 
     public static string GetMetadataFullName(INamedTypeSymbol type)
@@ -66,6 +67,30 @@ internal static class TypeNameUtilities
         return builder.ToString();
     }
 
+    public static string GetTypeIdentity(string fullTypeName)
+    {
+        var (namespaceName, typeName) = SplitNamespaceAndTypeName(fullTypeName);
+        var builder = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(namespaceName))
+        {
+            builder.Append(MakeId(namespaceName!));
+            builder.Append('_');
+        }
+
+        var containingTypes = typeName.Split('+');
+        for (var i = 0; i < containingTypes.Length; i++)
+        {
+            builder.Append(MakeId(containingTypes[i].Replace('`', '_')));
+            if (i < containingTypes.Length - 1)
+            {
+                builder.Append('_');
+            }
+        }
+
+        return builder.ToString();
+    }
+
     public static bool IsClosedConstructedGenericType(INamedTypeSymbol type)
     {
         return type.IsGenericType &&
@@ -76,20 +101,6 @@ internal static class TypeNameUtilities
     public static bool IsOpenGenericDefinition(INamedTypeSymbol type)
     {
         return type.IsGenericType && !IsClosedConstructedGenericType(type);
-    }
-
-    public static INamedTypeSymbol? FindOpenGenericRootSymbol(INamedTypeSymbol type)
-    {
-        if (type.ContainingType is not null)
-        {
-            return type.ContainingType
-                .GetTypeMembers(GetRootTypeName(type.Name))
-                .SingleOrDefault(static candidate => candidate.Arity == 0);
-        }
-
-        return type.ContainingNamespace
-            .GetTypeMembers(GetRootTypeName(type.Name))
-            .SingleOrDefault(static candidate => candidate.Arity == 0);
     }
 
     public static bool TryGetOpenGenericArity(string fullTypeName, out int arity)
@@ -146,28 +157,7 @@ internal static class TypeNameUtilities
 
     public static string GetTypeIdentity(INamedTypeSymbol type)
     {
-        var builder = new StringBuilder();
-
-        if (type.ContainingNamespace is { IsGlobalNamespace: false })
-        {
-            builder.Append(MakeId(type.ContainingNamespace.ToDisplayString()));
-            builder.Append('_');
-        }
-
-        var stack = new Stack<INamedTypeSymbol>();
-        for (var current = type; current is not null; current = current.ContainingType)
-        {
-            stack.Push(current);
-        }
-
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            builder.Append(MakeId(current.MetadataName.Replace('`', '_')));
-            builder.Append('_');
-        }
-
-        return builder.ToString().TrimEnd('_');
+        return GetTypeIdentity(GetMetadataFullName(type));
     }
 
     public static string MakeId(string value)

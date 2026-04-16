@@ -5,7 +5,7 @@ namespace WildDotNet.Nameof.Internal.Resolvers;
 
 internal interface ITypeMemberResolver
 {
-    bool CanResolve(NameofRequest request, Compilation compilation);
+    bool CanResolve(ParsedNameofRequest request, Compilation compilation);
 
-    ResolvedNameofType? Resolve(NameofRequest request, Compilation compilation);
+    ResolvedTypeShape? Resolve(ParsedNameofRequest request, Compilation compilation);
 }

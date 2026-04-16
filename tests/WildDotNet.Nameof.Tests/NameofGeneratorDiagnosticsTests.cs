@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using WildDotNet.Nameof.Tests.TestInfrastructure;
 
 namespace WildDotNet.Nameof.Tests;

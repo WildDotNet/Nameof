@@ -1,153 +1,157 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
-using WildDotNet.Nameof.Internal.Generation;
 using WildDotNet.Nameof.Internal.Model;
+using WildDotNet.Nameof.Internal.Policies;
 using WildDotNet.Nameof.Internal.Support;
 
 namespace WildDotNet.Nameof.Internal.Resolvers;
 
 internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
 {
-    public bool CanResolve(NameofRequest request, Compilation compilation)
+    public bool CanResolve(ParsedNameofRequest request, Compilation compilation)
     {
-        if (request.Symbol is not null)
+        if (request.Target.Symbol is INamedTypeSymbol symbol)
         {
-            return !SymbolEqualityComparer.Default.Equals(request.Symbol.ContainingAssembly, compilation.Assembly);
+            return !SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly);
         }
 
-        var requestedAssemblyName = request.AssemblyOfType?.ContainingAssembly.Identity.Name ?? request.AssemblyName;
-        return !string.Equals(requestedAssemblyName, compilation.Assembly.Identity.Name, StringComparison.Ordinal);
+        return !string.Equals(request.Target.RequestedAssemblyName, compilation.Assembly.Identity.Name, StringComparison.Ordinal);
     }
 
-    public ResolvedNameofType? Resolve(NameofRequest request, Compilation compilation)
+    public ResolvedTypeShape? Resolve(ParsedNameofRequest request, Compilation compilation)
     {
-        if (request.Symbol is not null)
+        if (request.Target.Symbol is INamedTypeSymbol symbolTarget)
         {
-            var fullTypeName = TypeNameUtilities.GetMetadataFullName(request.Symbol);
-            var assemblyName = request.Symbol.ContainingAssembly.Identity.Name;
-
-            var runtimeType = TryFindLoadedType(fullTypeName) ??
-                TryLoadTypeFromReferences(compilation, fullTypeName) ??
-                Type.GetType($"{fullTypeName}, {assemblyName}", throwOnError: false) ??
-                TryLoadAssemblyFromReferences(compilation, assemblyName)?.GetType(fullTypeName, throwOnError: false) ??
-                TryLoadAssemblyByName(assemblyName)?.GetType(fullTypeName, throwOnError: false);
-
-            if (runtimeType is null)
-            {
-                return null;
-            }
-
-            if (request.IsOpenGenericDefinition && runtimeType.IsGenericType && !runtimeType.IsGenericTypeDefinition)
-            {
-                runtimeType = runtimeType.GetGenericTypeDefinition();
-            }
-
-            return NameofSourceEmitter.CreateResolvedSymbolType(
-                compilation,
-                request.Symbol,
-                FilterMemberNames(
-                    request.Symbol,
-                    ExtractMemberNames(runtimeType, includePublicMembers: true, declaredOnly: true),
-                    compilation),
-                request.IsOpenGenericDefinition);
+            return ResolveFromSymbolTarget(compilation, request, symbolTarget);
         }
 
-        if (request.FullTypeName is null)
+        if (request.Target.FullTypeName is not string fullTypeName)
         {
             return null;
         }
 
-        if (request.AssemblyOfType is not null)
+        if (request.Target.AssemblyOfType is INamedTypeSymbol assemblyOfType)
         {
-            var assemblyName = request.AssemblyOfType.ContainingAssembly.Identity.Name;
-            var assemblyOfFullName = TypeNameUtilities.GetMetadataFullName(request.AssemblyOfType);
-
-            var whereRuntimeType = TryFindLoadedType(assemblyOfFullName) ??
-                Type.GetType($"{assemblyOfFullName}, {assemblyName}", throwOnError: false) ??
-                TryLoadAssemblyByName(assemblyName)?.GetType(assemblyOfFullName, throwOnError: false);
-
-            var targetAssembly = whereRuntimeType?.Assembly ?? TryLoadAssemblyByName(assemblyName);
-            var resolved = targetAssembly?.GetType(request.FullTypeName, throwOnError: false);
-            var symbol = FindTypeSymbol(request.AssemblyOfType.ContainingAssembly, request.FullTypeName);
-
-            if (resolved is null)
-            {
-                return null;
-            }
-
-            if (request.IsOpenGenericDefinition && resolved.IsGenericType && !resolved.IsGenericTypeDefinition)
-            {
-                resolved = resolved.GetGenericTypeDefinition();
-            }
-
-            return symbol is not null
-                ? NameofSourceEmitter.CreateResolvedSymbolType(
-                    compilation,
-                    symbol,
-                    FilterMemberNames(
-                        symbol,
-                        ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: true),
-                        compilation),
-                    request.IsOpenGenericDefinition)
-                : NameofSourceEmitter.CreateResolvedRuntimeType(
-                    compilation,
-                    resolved,
-                    FilterMemberNames(
-                        null,
-                        ExtractMemberNames(resolved, includePublicMembers: true, declaredOnly: false),
-                        compilation),
-                    request.IsOpenGenericDefinition);
+            return ResolveFromAssemblyOfTarget(compilation, request, fullTypeName, assemblyOfType);
         }
 
-        if (request.AssemblyName is null)
+        return ResolveFromAssemblyNameTarget(compilation, request, fullTypeName);
+    }
+
+    private static ResolvedTypeShape? ResolveFromSymbolTarget(
+        Compilation compilation,
+        ParsedNameofRequest request,
+        INamedTypeSymbol symbolTarget)
+    {
+        var metadataFullTypeName = TypeNameUtilities.GetMetadataFullName(symbolTarget);
+        var assemblyName = symbolTarget.ContainingAssembly.Identity.Name;
+        var runtimeType = LoadRuntimeType(compilation, metadataFullTypeName, assemblyName);
+        if (runtimeType is null)
         {
             return null;
         }
 
-        var type = TryFindLoadedType(request.FullTypeName);
-        if (type is null)
-        {
-            type = TryLoadTypeFromReferences(compilation, request.FullTypeName);
-        }
+        runtimeType = NormalizeOpenGeneric(runtimeType, request);
+        return ResolvedTypeShapeFactory.CreateResolvedSymbolType(
+            symbolTarget,
+            MemberInclusionPolicy.FilterReflectedMembers(
+                symbolTarget,
+                MemberInclusionPolicy.ExtractReflectedMembers(runtimeType, includePublicMembers: true, declaredOnly: true),
+                compilation),
+            request.Generic.IsOpenDefinition);
+    }
 
-        if (type is null)
-        {
-            var assembly = TryLoadAssemblyByName(request.AssemblyName) ?? TryLoadAssemblyFromReferences(compilation, request.AssemblyName);
-            type = assembly?.GetType(request.FullTypeName, throwOnError: false);
-        }
-
-        var referencedSymbol = FindReferencedTypeSymbol(compilation, request.AssemblyName, request.FullTypeName);
-
-        if (type is null)
+    private static ResolvedTypeShape? ResolveFromAssemblyOfTarget(
+        Compilation compilation,
+        ParsedNameofRequest request,
+        string fullTypeName,
+        INamedTypeSymbol assemblyOfType)
+    {
+        var assemblyName = assemblyOfType.ContainingAssembly.Identity.Name;
+        var assemblyOfFullName = TypeNameUtilities.GetMetadataFullName(assemblyOfType);
+        var targetAssembly = LoadAssemblyFromAnchor(assemblyName, assemblyOfFullName);
+        var runtimeType = targetAssembly?.GetType(fullTypeName, throwOnError: false);
+        if (runtimeType is null)
         {
             return null;
         }
 
-        if (request.IsOpenGenericDefinition && type.IsGenericType && !type.IsGenericTypeDefinition)
+        runtimeType = NormalizeOpenGeneric(runtimeType, request);
+        var resolvedSymbol = ReferencedTypeSymbolLocator.FindTypeSymbol(assemblyOfType.ContainingAssembly, fullTypeName);
+        return CreateResolvedShape(compilation, request, runtimeType, resolvedSymbol);
+    }
+
+    private static ResolvedTypeShape? ResolveFromAssemblyNameTarget(
+        Compilation compilation,
+        ParsedNameofRequest request,
+        string fullTypeName)
+    {
+        var runtimeType = LoadRuntimeType(compilation, fullTypeName, request.Target.RequestedAssemblyName);
+        if (runtimeType is null)
         {
-            type = type.GetGenericTypeDefinition();
+            return null;
         }
 
+        runtimeType = NormalizeOpenGeneric(runtimeType, request);
+        var referencedSymbol = ReferencedTypeSymbolLocator.FindReferencedTypeSymbol(
+            compilation,
+            request.Target.RequestedAssemblyName,
+            fullTypeName);
+        return CreateResolvedShape(compilation, request, runtimeType, referencedSymbol);
+    }
+
+    private static ResolvedTypeShape? CreateResolvedShape(
+        Compilation compilation,
+        ParsedNameofRequest request,
+        Type runtimeType,
+        INamedTypeSymbol? referencedSymbol)
+    {
         return referencedSymbol is not null
-            ? NameofSourceEmitter.CreateResolvedSymbolType(
-                compilation,
+            ? ResolvedTypeShapeFactory.CreateResolvedSymbolType(
                 referencedSymbol,
-                FilterMemberNames(
+                MemberInclusionPolicy.FilterReflectedMembers(
                     referencedSymbol,
-                    ExtractMemberNames(type, includePublicMembers: true, declaredOnly: true),
+                    MemberInclusionPolicy.ExtractReflectedMembers(runtimeType, includePublicMembers: true, declaredOnly: true),
                     compilation),
-                request.IsOpenGenericDefinition)
-            : NameofSourceEmitter.CreateResolvedRuntimeType(
+                request.Generic.IsOpenDefinition)
+            : ResolvedTypeShapeFactory.CreateResolvedRuntimeType(
                 compilation,
-                type,
-                FilterMemberNames(
+                runtimeType,
+                MemberInclusionPolicy.FilterReflectedMembers(
                     null,
-                    ExtractMemberNames(type, includePublicMembers: true, declaredOnly: false),
+                    MemberInclusionPolicy.ExtractReflectedMembers(runtimeType, includePublicMembers: true, declaredOnly: false),
                     compilation),
-                request.IsOpenGenericDefinition);
+                request.Generic.IsOpenDefinition);
+    }
+
+    private static Type? LoadRuntimeType(Compilation compilation, string fullTypeName, string assemblyName)
+    {
+        return TryFindLoadedType(fullTypeName) ??
+               TryLoadTypeFromReferences(compilation, fullTypeName) ??
+               Type.GetType($"{fullTypeName}, {assemblyName}", throwOnError: false) ??
+               TryLoadAssemblyFromReferences(compilation, assemblyName)?.GetType(fullTypeName, throwOnError: false) ??
+               TryLoadAssemblyByName(assemblyName)?.GetType(fullTypeName, throwOnError: false);
+    }
+
+    private static Assembly? LoadAssemblyFromAnchor(string assemblyName, string assemblyOfFullName)
+    {
+        var whereRuntimeType = TryFindLoadedType(assemblyOfFullName) ??
+            Type.GetType($"{assemblyOfFullName}, {assemblyName}", throwOnError: false) ??
+            TryLoadAssemblyByName(assemblyName)?.GetType(assemblyOfFullName, throwOnError: false);
+
+        return whereRuntimeType?.Assembly ?? TryLoadAssemblyByName(assemblyName);
+    }
+
+    private static Type NormalizeOpenGeneric(Type runtimeType, ParsedNameofRequest request)
+    {
+        if (request.Generic.IsOpenDefinition && runtimeType.IsGenericType && !runtimeType.IsGenericTypeDefinition)
+        {
+            return runtimeType.GetGenericTypeDefinition();
+        }
+
+        return runtimeType;
     }
 
 #pragma warning disable RS1035
@@ -243,123 +247,6 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
     }
 #pragma warning restore RS1035
 
-    private static HashSet<string> ExtractMemberNames(Type type, bool includePublicMembers, bool declaredOnly)
-    {
-        var names = new HashSet<string>(StringComparer.Ordinal);
-
-        var visibility = includePublicMembers
-            ? BindingFlags.Public | BindingFlags.NonPublic
-            : BindingFlags.NonPublic;
-
-        var flags = BindingFlags.Instance | BindingFlags.Static | visibility;
-        if (declaredOnly)
-        {
-            flags |= BindingFlags.DeclaredOnly;
-        }
-
-        foreach (var field in type.GetFields(flags))
-        {
-            AddIfRelevant(field.Name, names);
-        }
-
-        foreach (var property in type.GetProperties(flags))
-        {
-            AddIfRelevant(property.Name, names);
-        }
-
-        foreach (var @event in type.GetEvents(flags))
-        {
-            AddIfRelevant(@event.Name, names);
-        }
-
-        foreach (var method in type.GetMethods(flags))
-        {
-            if (!method.IsSpecialName)
-            {
-                AddIfRelevant(method.Name, names);
-            }
-        }
-
-        return names;
-    }
-
-    private static HashSet<string> FilterMemberNames(
-        INamedTypeSymbol? typeSymbol,
-        HashSet<string> memberNames,
-        Compilation compilation)
-    {
-        FilterReflectionOnlyArtifacts(memberNames);
-
-        if (typeSymbol is null)
-        {
-            return memberNames;
-        }
-
-        if (typeSymbol.TypeKind == TypeKind.Enum)
-        {
-            var enumFieldNames = new HashSet<string>(
-                typeSymbol.GetMembers()
-                    .OfType<IFieldSymbol>()
-                    .Where(static field => !field.IsImplicitlyDeclared && field.AssociatedSymbol is null)
-                    .Select(static field => field.Name),
-                StringComparer.Ordinal);
-
-            memberNames.IntersectWith(enumFieldNames);
-            return memberNames;
-        }
-
-        foreach (var member in typeSymbol.GetMembers())
-        {
-            if (member.IsImplicitlyDeclared)
-            {
-                continue;
-            }
-
-            var name = member switch
-            {
-                IFieldSymbol field when field.AssociatedSymbol is null => field.Name,
-                IPropertySymbol property => property.Name,
-                IEventSymbol @event => @event.Name,
-                IMethodSymbol method when method.MethodKind == MethodKind.Ordinary => method.Name,
-                _ => null
-            };
-
-            if (name is null)
-            {
-                continue;
-            }
-
-            if (compilation.IsSymbolAccessibleWithin(member, compilation.Assembly))
-            {
-                memberNames.Remove(name);
-            }
-        }
-
-        return memberNames;
-    }
-
-    private static HashSet<string> FilterReflectionOnlyArtifacts(HashSet<string> memberNames)
-    {
-        memberNames.Remove("value__");
-        memberNames.RemoveWhere(static name =>
-            name.StartsWith("<", StringComparison.Ordinal) ||
-            name.StartsWith("get_", StringComparison.Ordinal) ||
-            name.StartsWith("set_", StringComparison.Ordinal) ||
-            name.StartsWith("add_", StringComparison.Ordinal) ||
-            name.StartsWith("remove_", StringComparison.Ordinal) ||
-            name is ".ctor" or ".cctor");
-
-        return memberNames;
-    }
-
-    private static void AddIfRelevant(string name, HashSet<string> names)
-    {
-        if (!name.StartsWith("<", StringComparison.Ordinal))
-        {
-            names.Add(name);
-        }
-    }
-
     private static Type? TryFindLoadedType(string fullTypeName)
     {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -372,57 +259,5 @@ internal sealed class ExternalReflectionMemberResolver : ITypeMemberResolver
         }
 
         return null;
-    }
-
-    private static INamedTypeSymbol? FindReferencedTypeSymbol(
-        Compilation compilation,
-        string assemblyName,
-        string fullTypeName)
-    {
-        foreach (var reference in compilation.References)
-        {
-            if (compilation.GetAssemblyOrModuleSymbol(reference) is not IAssemblySymbol assemblySymbol)
-            {
-                continue;
-            }
-
-            if (!string.Equals(assemblySymbol.Identity.Name, assemblyName, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            return FindTypeSymbol(assemblySymbol, fullTypeName);
-        }
-
-        return null;
-    }
-
-    private static INamedTypeSymbol? FindTypeSymbol(IAssemblySymbol assemblySymbol, string fullTypeName)
-    {
-        var lastDot = fullTypeName.LastIndexOf('.');
-        var namespaceName = lastDot >= 0 ? fullTypeName[..lastDot] : string.Empty;
-        var typeName = lastDot >= 0 ? fullTypeName[(lastDot + 1)..] : fullTypeName;
-        var rootTypeName = TypeNameUtilities.GetRootTypeName(typeName);
-        var hasGenericArity = TypeNameUtilities.TryGetOpenGenericArity(typeName, out var arity);
-
-        var currentNamespace = assemblySymbol.GlobalNamespace;
-
-        if (!string.IsNullOrEmpty(namespaceName))
-        {
-            foreach (var namespaceSegment in namespaceName.Split('.'))
-            {
-                currentNamespace = currentNamespace.GetNamespaceMembers()
-                    .SingleOrDefault(ns => string.Equals(ns.Name, namespaceSegment, StringComparison.Ordinal));
-
-                if (currentNamespace is null)
-                {
-                    return null;
-                }
-            }
-        }
-
-        return hasGenericArity
-            ? currentNamespace.GetTypeMembers(rootTypeName, arity).SingleOrDefault()
-            : currentNamespace.GetTypeMembers(typeName).SingleOrDefault();
     }
 }

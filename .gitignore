@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 docs/superpowers/
 *.received.txt
+.claude/

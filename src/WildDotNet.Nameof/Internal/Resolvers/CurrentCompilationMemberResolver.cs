@@ -1,80 +1,34 @@
-using System.Collections.Generic;
+using System;
 using Microsoft.CodeAnalysis;
-using WildDotNet.Nameof.Internal.Generation;
 using WildDotNet.Nameof.Internal.Model;
+using WildDotNet.Nameof.Internal.Policies;
 
 namespace WildDotNet.Nameof.Internal.Resolvers;
 
 internal sealed class CurrentCompilationMemberResolver : ITypeMemberResolver
 {
-    public bool CanResolve(NameofRequest request, Compilation compilation)
+    public bool CanResolve(ParsedNameofRequest request, Compilation compilation)
     {
-        if (request.Symbol is not null)
+        if (request.Target.Symbol is INamedTypeSymbol symbol)
         {
-            return SymbolEqualityComparer.Default.Equals(request.Symbol.ContainingAssembly, compilation.Assembly);
+            return SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly);
         }
 
-        if (request.FullTypeName is null)
-        {
-            return false;
-        }
-
-        var requestedAssemblyName = request.AssemblyOfType?.ContainingAssembly.Identity.Name ?? request.AssemblyName;
-        return string.Equals(requestedAssemblyName, compilation.Assembly.Identity.Name, System.StringComparison.Ordinal);
+        return string.Equals(request.Target.RequestedAssemblyName, compilation.Assembly.Identity.Name, StringComparison.Ordinal);
     }
 
-    public ResolvedNameofType? Resolve(NameofRequest request, Compilation compilation)
+    public ResolvedTypeShape? Resolve(ParsedNameofRequest request, Compilation compilation)
     {
-        var type = request.Symbol ?? compilation.GetTypeByMetadataName(request.FullTypeName!);
+        var type = request.Target.Symbol ?? compilation.GetTypeByMetadataName(request.Target.FullTypeName!);
         if (type is null)
         {
             return null;
         }
 
-        var memberNames = ExtractMemberNames(type, compilation);
-        return NameofSourceEmitter.CreateResolvedSymbolType(
-            compilation,
+        var memberNames = MemberInclusionPolicy.FilterSymbolMembers(type, compilation);
+        return ResolvedTypeShapeFactory.CreateResolvedSymbolType(
             type,
             memberNames,
-            request.IsOpenGenericDefinition);
-    }
-
-    private static HashSet<string> ExtractMemberNames(INamedTypeSymbol type, Compilation compilation)
-    {
-        var names = new HashSet<string>(System.StringComparer.Ordinal);
-
-        foreach (var member in type.GetMembers())
-        {
-            if (member.IsImplicitlyDeclared)
-            {
-                continue;
-            }
-
-            if (IsDirectlyAccessible(member, compilation))
-            {
-                continue;
-            }
-
-            var name = member switch
-            {
-                IFieldSymbol field when field.AssociatedSymbol is null => field.Name,
-                IPropertySymbol property => property.Name,
-                IEventSymbol @event => @event.Name,
-                IMethodSymbol method when method.MethodKind == MethodKind.Ordinary => method.Name,
-                _ => null
-            };
-
-            if (!string.IsNullOrWhiteSpace(name) && name is not null && !name.StartsWith("<", System.StringComparison.Ordinal))
-            {
-                names.Add(name);
-            }
-        }
-
-        return names;
-    }
-
-    private static bool IsDirectlyAccessible(ISymbol member, Compilation compilation)
-    {
-        return compilation.IsSymbolAccessibleWithin(member, compilation.Assembly);
+            request.Generic.IsOpenDefinition);
     }
 }

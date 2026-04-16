@@ -6,11 +6,11 @@ using WildDotNet.Nameof.Internal.Support;
 
 namespace WildDotNet.Nameof.Internal.Requests;
 
-internal static class NameofRequestCollector
+internal static class NameofRequestParser
 {
-    public static ImmutableArray<NameofRequest> Collect(Compilation compilation)
+    public static ImmutableArray<ParsedNameofRequest> Parse(Compilation compilation)
     {
-        var builder = ImmutableArray.CreateBuilder<NameofRequest>();
+        var builder = ImmutableArray.CreateBuilder<ParsedNameofRequest>();
 
         foreach (var attribute in compilation.Assembly.GetAttributes())
         {
@@ -38,28 +38,24 @@ internal static class NameofRequestCollector
                 {
                     if (TypeNameUtilities.IsClosedConstructedGenericType(typeSymbol))
                     {
-                        builder.Add(new NameofRequest(
-                            typeSymbol,
-                            null,
-                            null,
-                            null,
-                            attributeLocation,
-                            IsClosedGeneric: true));
+                        builder.Add(new ParsedNameofRequest(
+                            RequestTarget.ForSymbol(typeSymbol),
+                            RequestGenericInfo.ClosedGeneric(),
+                            attributeLocation));
                     }
                     else if (TypeNameUtilities.IsOpenGenericDefinition(typeSymbol))
                     {
-                        builder.Add(new NameofRequest(
-                            typeSymbol.OriginalDefinition,
-                            null,
-                            null,
-                            null,
-                            attributeLocation,
-                            IsOpenGenericDefinition: true,
-                            GenericArity: typeSymbol.Arity));
+                        builder.Add(new ParsedNameofRequest(
+                            RequestTarget.ForSymbol(typeSymbol.OriginalDefinition),
+                            RequestGenericInfo.OpenDefinition(typeSymbol.Arity),
+                            attributeLocation));
                     }
                     else
                     {
-                        builder.Add(new NameofRequest(typeSymbol, null, null, null, attributeLocation));
+                        builder.Add(new ParsedNameofRequest(
+                            RequestTarget.ForSymbol(typeSymbol),
+                            RequestGenericInfo.NonGeneric(),
+                            attributeLocation));
                     }
                 }
 
@@ -87,9 +83,7 @@ internal static class NameofRequestCollector
                     fullTypeName,
                     assemblyArgument,
                     attributeLocation,
-                    isOpenGenericDefinition: false,
-                    isClosedGeneric: true,
-                    genericArity: 0);
+                    RequestGenericInfo.ClosedGeneric());
                 continue;
             }
 
@@ -98,14 +92,10 @@ internal static class NameofRequestCollector
                 var resolvedGeneric = compilation.GetTypeByMetadataName(fullTypeName);
                 if (resolvedGeneric is not null)
                 {
-                    builder.Add(new NameofRequest(
-                        resolvedGeneric.OriginalDefinition,
-                        null,
-                        null,
-                        null,
-                        attributeLocation,
-                        IsOpenGenericDefinition: true,
-                        GenericArity: genericArity));
+                    builder.Add(new ParsedNameofRequest(
+                        RequestTarget.ForSymbol(resolvedGeneric.OriginalDefinition),
+                        RequestGenericInfo.OpenDefinition(genericArity),
+                        attributeLocation));
                     continue;
                 }
 
@@ -114,16 +104,17 @@ internal static class NameofRequestCollector
                     fullTypeName,
                     assemblyArgument,
                     attributeLocation,
-                    isOpenGenericDefinition: true,
-                    isClosedGeneric: false,
-                    genericArity: genericArity);
+                    RequestGenericInfo.OpenDefinition(genericArity));
                 continue;
             }
 
             var resolved = compilation.GetTypeByMetadataName(fullTypeName);
             if (resolved is not null)
             {
-                    builder.Add(new NameofRequest(resolved, null, null, null, attributeLocation));
+                builder.Add(new ParsedNameofRequest(
+                    RequestTarget.ForSymbol(resolved),
+                    RequestGenericInfo.NonGeneric(),
+                    attributeLocation));
                 continue;
             }
 
@@ -132,50 +123,36 @@ internal static class NameofRequestCollector
                 fullTypeName,
                 assemblyArgument,
                 attributeLocation,
-                isOpenGenericDefinition: false,
-                isClosedGeneric: false,
-                genericArity: 0);
+                RequestGenericInfo.NonGeneric());
         }
 
         return builder.ToImmutable();
     }
 
     private static void AddFullNameRequest(
-        ImmutableArray<NameofRequest>.Builder builder,
+        ImmutableArray<ParsedNameofRequest>.Builder builder,
         string fullTypeName,
         TypedConstant assemblyArgument,
         Location? attributeLocation,
-        bool isOpenGenericDefinition,
-        bool isClosedGeneric,
-        int genericArity)
+        RequestGenericInfo genericInfo)
     {
         if (assemblyArgument.Kind == TypedConstantKind.Type &&
             assemblyArgument.Value is INamedTypeSymbol assemblyOfType)
         {
-            builder.Add(new NameofRequest(
-                null,
-                fullTypeName,
-                assemblyOfType,
-                null,
-                attributeLocation,
-                IsOpenGenericDefinition: isOpenGenericDefinition,
-                IsClosedGeneric: isClosedGeneric,
-                GenericArity: genericArity));
+            builder.Add(new ParsedNameofRequest(
+                RequestTarget.ForFullNameWithAssemblyOfType(fullTypeName, assemblyOfType),
+                genericInfo,
+                attributeLocation));
             return;
         }
 
         if (assemblyArgument.Kind == TypedConstantKind.Primitive &&
             assemblyArgument.Value is string assemblyName)
         {
-            builder.Add(new NameofRequest(
-                null,
-                fullTypeName,
-                null,
-                assemblyName,
-                attributeLocation,
-                IsOpenGenericDefinition: isOpenGenericDefinition,
-                IsClosedGeneric: isClosedGeneric,
-                GenericArity: genericArity));
+            builder.Add(new ParsedNameofRequest(
+                RequestTarget.ForFullNameWithAssemblyName(fullTypeName, assemblyName),
+                genericInfo,
+                attributeLocation));
         }
     }
 }
