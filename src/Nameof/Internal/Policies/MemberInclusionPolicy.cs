@@ -74,6 +74,11 @@ internal static class MemberInclusionPolicy
 
     private static string? TryGetMemberName(ISymbol member)
     {
+        if (IsExplicitInterfaceImplementation(member))
+        {
+            return null;
+        }
+
         var name = member switch
         {
             IFieldSymbol field when field.AssociatedSymbol is null => field.Name,
@@ -88,6 +93,17 @@ internal static class MemberInclusionPolicy
                !name.StartsWith("<", StringComparison.Ordinal)
             ? name
             : null;
+    }
+
+    private static bool IsExplicitInterfaceImplementation(ISymbol member)
+    {
+        return member switch
+        {
+            IMethodSymbol method => method.ExplicitInterfaceImplementations.Length > 0,
+            IPropertySymbol property => property.ExplicitInterfaceImplementations.Length > 0,
+            IEventSymbol @event => @event.ExplicitInterfaceImplementations.Length > 0,
+            _ => false,
+        };
     }
 
     internal static HashSet<string> ExtractReflectedMembers(Type type, bool includePublicMembers, bool declaredOnly)
@@ -135,6 +151,7 @@ internal static class MemberInclusionPolicy
         memberNames.Remove("value__");
         memberNames.RemoveWhere(static name =>
             name.StartsWith("<", StringComparison.Ordinal) ||
+            name.Contains(".", StringComparison.Ordinal) ||
             name.StartsWith("get_", StringComparison.Ordinal) ||
             name.StartsWith("set_", StringComparison.Ordinal) ||
             name.StartsWith("add_", StringComparison.Ordinal) ||
@@ -144,7 +161,8 @@ internal static class MemberInclusionPolicy
 
     private static void AddReflectedMemberIfRelevant(string name, HashSet<string> names)
     {
-        if (!name.StartsWith("<", StringComparison.Ordinal))
+        if (!name.StartsWith("<", StringComparison.Ordinal) &&
+            !name.Contains(".", StringComparison.Ordinal))
         {
             names.Add(name);
         }
